@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,33 +13,25 @@
     "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro",
     "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
 
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  /* 小安暖色主題 */
+  --color-bg: #FBF8F4;
+  /* 米白背景 */
+  --color-warm-sand: #F5E6D3;
+  /* 暖沙（AI 消息） */
+  --color-coral: #E8A87C;
+  /* 珊瑚橘（用戶 / CTA） */
+  --color-safe: #7CB9A8;
+  /* 安全綠（提示） */
+  --color-text: #4A4238;
+  /* 主文字 */
+  --color-text-muted: #8F7E6E;
+  /* 次要文字 */
+  --color-border: #E6DDD5;
+  /* 邊框 */
 
-  --primary-glow: conic-gradient(from 180deg at 50% 50%,
-      #16abff33 0deg,
-      #0885ff33 55deg,
-      #54d6ff33 120deg,
-      #0071ff33 160deg,
-      transparent 360deg);
-  --secondary-glow: radial-gradient(rgba(255, 255, 255, 1),
-      rgba(255, 255, 255, 0));
-
-  --tile-start-rgb: 239, 245, 249;
-  --tile-end-rgb: 228, 232, 233;
-  --tile-border: conic-gradient(#00000080,
-      #00000040,
-      #00000030,
-      #00000020,
-      #00000010,
-      #00000010,
-      #00000080);
-
-  --callout-rgb: 238, 240, 241;
-  --callout-border-rgb: 172, 175, 176;
-  --card-rgb: 180, 185, 188;
-  --card-border-rgb: 131, 134, 135;
+  --foreground-rgb: 74, 66, 56;
+  --background-start-rgb: 251, 248, 244;
+  --background-end-rgb: 245, 230, 211;
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -82,13 +76,9 @@ body {
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  /* background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb)); */
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
 }
 
 a {

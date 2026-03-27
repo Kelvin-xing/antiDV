@@ -32,7 +32,8 @@ const Sidebar: FC<ISidebarProps> = ({
   const { t } = useTranslation()
   return (
     <div
-      className="shrink-0 flex flex-col overflow-y-auto bg-white pc:w-[244px] tablet:w-[192px] mobile:w-[240px]  border-r border-gray-200 tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
+      className="shrink-0 flex flex-col overflow-y-auto pc:w-[244px] tablet:w-[192px] mobile:w-[240px] tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
+      style={{ backgroundColor: '#FAF6F2', borderRight: '1px solid #E6DDD5' }}
     >
       {list.length < MAX_CONVERSATION_LENTH && (
         <div className="flex flex-shrink-0 p-4 !pb-0">
@@ -45,7 +46,7 @@ const Sidebar: FC<ISidebarProps> = ({
         </div>
       )}
 
-      <nav className="mt-4 flex-1 space-y-1 bg-white p-4 !pt-0">
+      <nav className="mt-4 flex-1 space-y-1 p-4 !pt-0" style={{ backgroundColor: '#FAF6F2' }}>
         {list.map((item) => {
           const isCurrent = item.id === currentId
           const ItemIcon
@@ -55,19 +56,17 @@ const Sidebar: FC<ISidebarProps> = ({
               onClick={() => onCurrentIdChange(item.id)}
               key={item.id}
               className={classNames(
-                isCurrent
-                  ? 'bg-primary-50 text-primary-600'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-700',
-                'group flex items-center rounded-md px-2 py-2 text-sm font-medium cursor-pointer',
+                'group flex items-center rounded-lg px-2 py-2 text-sm font-medium cursor-pointer transition-colors duration-150',
               )}
+              style={isCurrent
+                ? { backgroundColor: '#F5E6D3', color: '#C26F3A' }
+                : { color: '#5C4D3E' }}
+              onMouseEnter={(e) => { if (!isCurrent) { (e.currentTarget as HTMLElement).style.backgroundColor = '#F2EDE8' } }}
+              onMouseLeave={(e) => { if (!isCurrent) { (e.currentTarget as HTMLElement).style.backgroundColor = '' } }}
             >
               <ItemIcon
-                className={classNames(
-                  isCurrent
-                    ? 'text-primary-600'
-                    : 'text-gray-400 group-hover:text-gray-500',
-                  'mr-3 h-5 w-5 flex-shrink-0',
-                )}
+                className="mr-3 h-5 w-5 flex-shrink-0"
+                style={{ color: isCurrent ? '#C26F3A' : '#B5A898' }}
                 aria-hidden="true"
               />
               {item.name}
@@ -79,7 +78,7 @@ const Sidebar: FC<ISidebarProps> = ({
         <Card><div className="flex flex-row items-center"><ChatBubbleOvalLeftEllipsisSolidIcon className="text-primary-600 h-6 w-6 mr-2" /><span>LangGenius</span></div></Card>
       </a> */}
       <div className="flex flex-shrink-0 pr-4 pb-4 pl-4">
-        <div className="text-gray-400 font-normal text-xs">© {copyRight} {(new Date()).getFullYear()}</div>
+        <div className="font-normal text-xs" style={{ color: '#B5A898' }}>© {copyRight} {(new Date()).getFullYear()}</div>
       </div>
     </div>
   )
