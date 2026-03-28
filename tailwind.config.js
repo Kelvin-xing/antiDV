@@ -7,6 +7,9 @@ module.exports = {
   theme: {
     typography: require('./typography'),
     extend: {
+      fontFamily: {
+        sans: ['Noto Sans SC', 'system-ui', 'sans-serif'],
+      },
       colors: {
         // 小安暖色系統
         warm: {
