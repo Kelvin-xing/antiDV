@@ -21,13 +21,7 @@ import { getProcessedFiles } from '@/app/components/base/file-uploader-in-attach
 
 export interface IChatProps {
   chatList: ChatItem[]
-  /**
-   * Whether to display the editing area and rating status
-   */
   feedbackDisabled?: boolean
-  /**
-   * Whether to display the input area
-   */
   isHideSendInput?: boolean
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
@@ -37,6 +31,7 @@ export interface IChatProps {
   controlClearQuery?: number
   visionConfig?: VisionSettings
   fileConfig?: FileUpload
+  onDeleteMessage?: (id: string) => void
 }
 
 const Chat: FC<IChatProps> = ({
@@ -51,6 +46,7 @@ const Chat: FC<IChatProps> = ({
   controlClearQuery,
   visionConfig,
   fileConfig,
+  onDeleteMessage,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -155,6 +151,7 @@ const Chat: FC<IChatProps> = ({
               onFeedback={onFeedback}
               isResponding={isResponding && isLast}
               suggestionClick={suggestionClick}
+              onDelete={onDeleteMessage ? () => onDeleteMessage(item.id) : undefined}
             />
           }
           return (
@@ -164,6 +161,7 @@ const Chat: FC<IChatProps> = ({
               content={item.content}
               useCurrentUserAvatar={useCurrentUserAvatar}
               imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
+              onDelete={onDeleteMessage ? () => onDeleteMessage(item.id) : undefined}
             />
           )
         })}

@@ -70,6 +70,7 @@ interface IAnswerProps {
   isResponding?: boolean
   allToolIcons?: Record<string, string | Emoji>
   suggestionClick?: (suggestion: string) => void
+  onDelete?: () => void
 }
 
 // The component needs to maintain its own state to control whether to display input component
@@ -80,6 +81,7 @@ const Answer: FC<IAnswerProps> = ({
   isResponding,
   allToolIcons,
   suggestionClick = () => { },
+  onDelete,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
@@ -220,6 +222,23 @@ const Answer: FC<IAnswerProps> = ({
               {!feedbackDisabled && !item.feedbackDisabled && renderItemOperation()}
               {/* User feedback must be displayed */}
               {!feedbackDisabled && renderFeedbackRating(feedback?.rating)}
+              {onDelete && !isResponding && (
+                <Tooltip selector={`delete-answer-${id}`} content="刪除此回覆">
+                  {OperationBtn({
+                    innerContent: (
+                      <IconWrapper>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                      </IconWrapper>
+                    ),
+                    onClick: onDelete,
+                  })}
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>

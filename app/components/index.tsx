@@ -9,7 +9,7 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback, deleteConversation } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -22,6 +22,7 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { useUserHash } from '@/hooks/use-user-hash'
 
 export interface IMainProps {
   params: any
@@ -32,6 +33,21 @@ const Main: FC<IMainProps> = () => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const hasSetAppConfig = APP_ID && API_KEY
+
+  // Hash identity — auto-generate on first visit, prompt user to save
+  const { currentHash, generateHash } = useUserHash()
+  useEffect(() => {
+    if (currentHash === null) {
+      const newHash = generateHash()
+      Toast.notify({
+        type: 'success',
+        message: `已為你生成識別碼，請點擊側邊欄「🔑 我的身份識別碼」複製保存，換設備時可憑此找回聊天記錄。`,
+        duration: 8000,
+      } as any)
+    }
+    // only run once after hook reports currentHash=null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentHash === null])
 
   /*
   * app info
@@ -634,6 +650,36 @@ const Main: FC<IMainProps> = () => {
     notify({ type: 'success', message: t('common.api.success') })
   }
 
+  const handleDeleteMessage = (id: string) => {
+    // Local UI removal only — Dify has no single-message delete API
+    setChatList(produce(getChatList(), (draft) => {
+      const idx = draft.findIndex(item => item.id === id)
+      if (idx !== -1) { draft.splice(idx, 1) }
+    }))
+  }
+
+  const handleDeleteConversation = async (id: string) => {
+    try {
+      await deleteConversation(id)
+    }
+    catch (e) {
+      // silently continue — remove from UI regardless
+    }
+    const remaining = conversationList.filter(item => item.id !== id)
+    setConversationList(remaining)
+    if (currConversationId === id) {
+      const next = remaining.find(item => item.id !== '-1')
+      setCurrConversationId(next ? next.id : '-1', APP_ID)
+    }
+  }
+
+  const handleClearAll = async () => {
+    const realConversations = conversationList.filter(item => item.id !== '-1')
+    await Promise.allSettled(realConversations.map(item => deleteConversation(item.id)))
+    setConversationList([])
+    setCurrConversationId('-1', APP_ID)
+  }
+
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
     return (
@@ -642,6 +688,8 @@ const Main: FC<IMainProps> = () => {
         onCurrentIdChange={handleConversationIdChange}
         currentId={currConversationId}
         copyRight={APP_INFO.copyright || APP_INFO.title}
+        onDeleteConversation={handleDeleteConversation}
+        onClearAll={handleClearAll}
       />
     )
   }
@@ -693,6 +741,7 @@ const Main: FC<IMainProps> = () => {
                   checkCanSend={checkCanSend}
                   visionConfig={visionConfig}
                   fileConfig={fileConfig}
+                  onDeleteMessage={handleDeleteMessage}
                 />
               </div>)
           }

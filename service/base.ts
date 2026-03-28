@@ -246,8 +246,19 @@ const handleStream = (
   read()
 }
 
+const getUserHash = (): string | null => {
+  if (typeof window === 'undefined') { return null }
+  return window.localStorage.getItem('xiaoAn_user_hash')
+}
+
 const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: IOtherOptions) => {
   const options = Object.assign({}, baseOptions, fetchOptions)
+
+  const userHash = getUserHash()
+  if (userHash) {
+    if (!options.headers) { options.headers = new Headers({ 'Content-Type': ContentType.json }) }
+    options.headers.set('X-User-Hash', userHash)
+  }
 
   const urlPrefix = API_PREFIX
 
@@ -373,6 +384,12 @@ export const ssePost = (
   const options = Object.assign({}, baseOptions, {
     method: 'POST',
   }, fetchOptions)
+
+  const userHash = getUserHash()
+  if (userHash) {
+    if (!options.headers) { options.headers = new Headers({ 'Content-Type': ContentType.json }) }
+    options.headers.set('X-User-Hash', userHash)
+  }
 
   const urlPrefix = API_PREFIX
   const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`

@@ -6,8 +6,9 @@ import { API_KEY, API_URL, APP_ID, APP_INFO } from '@/config'
 const userPrefix = `user_${APP_ID}:`
 
 export const getInfo = (request: NextRequest) => {
+  const userHash = request.headers.get('X-User-Hash')
   const sessionId = request.cookies.get('session_id')?.value || v4()
-  const user = userPrefix + sessionId
+  const user = userPrefix + (userHash || sessionId)
   return {
     sessionId,
     user,
@@ -15,8 +16,7 @@ export const getInfo = (request: NextRequest) => {
 }
 
 export const setSession = (sessionId: string) => {
-  if (APP_INFO.disable_session_same_site)
-  { return { 'Set-Cookie': `session_id=${sessionId}; SameSite=None; Secure` } }
+  if (APP_INFO.disable_session_same_site) { return { 'Set-Cookie': `session_id=${sessionId}; SameSite=None; Secure` } }
 
   return { 'Set-Cookie': `session_id=${sessionId}` }
 }
