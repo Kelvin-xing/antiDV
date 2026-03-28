@@ -43,6 +43,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
             return
         }
         setInputValue('')
+        window.location.reload()
     }
 
     return (

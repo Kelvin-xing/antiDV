@@ -35,8 +35,9 @@ const Main: FC<IMainProps> = () => {
   const hasSetAppConfig = APP_ID && API_KEY
 
   // Hash identity — auto-generate on first visit, prompt user to save
-  const { currentHash, generateHash } = useUserHash()
+  const { currentHash, initialized, generateHash } = useUserHash()
   useEffect(() => {
+    if (!initialized) return
     if (currentHash === null) {
       const newHash = generateHash()
       Toast.notify({
@@ -45,9 +46,9 @@ const Main: FC<IMainProps> = () => {
         duration: 8000,
       } as any)
     }
-    // only run once after hook reports currentHash=null
+    // only run once after localStorage is read
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentHash === null])
+  }, [initialized])
 
   /*
   * app info
