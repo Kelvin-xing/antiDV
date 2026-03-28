@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/tmp/adv-contacts' : path.join(process.cwd(), 'data'))
 const CONTACTS_FILE = path.join(DATA_DIR, 'contacts.jsonl')
 // Simple admin secret — set CONTACT_ADMIN_SECRET env var in production
 const ADMIN_SECRET = process.env.CONTACT_ADMIN_SECRET || 'xiao-an-admin'
