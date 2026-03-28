@@ -42,7 +42,7 @@ const Main: FC<IMainProps> = () => {
       const newHash = generateHash()
       Toast.notify({
         type: 'success',
-        message: `已為你生成識別碼，請點擊側邊欄「🔑 我的身份識別碼」複製保存，換設備時可憑此找回聊天記錄。`,
+        message: `已为你生成识别码，请点击侧边栏「🔑 我的身份识别码」复制保存，换设备时可凭此找回聊天记录。`,
         duration: 8000,
       } as any)
     }

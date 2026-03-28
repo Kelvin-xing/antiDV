@@ -4,7 +4,7 @@ export const API_KEY = `${process.env.NEXT_PUBLIC_APP_KEY}`
 export const API_URL = `${process.env.NEXT_PUBLIC_API_URL}`
 export const APP_INFO: AppInfo = {
   title: '小安',
-  description: '你不是一個人，小安在這裡陪你',
+  description: '你不是一个人，小安在这里陪你',
   copyright: '小安 反家暴AI助手',
   privacy_policy: '',
   default_language: 'zh-Hans',

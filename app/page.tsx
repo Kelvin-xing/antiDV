@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import React from 'react'
 import Link from 'next/link'
+import ContactForm from '@/app/components/contact-form'
 
 const EMERGENCY_HOTLINE = '110'
 const DOMESTIC_VIOLENCE_HOTLINE = '12338'
@@ -8,42 +9,42 @@ const DOMESTIC_VIOLENCE_HOTLINE = '12338'
 const features = [
   {
     icon: '💬',
-    title: '24 小時傾聽',
-    desc: '無論幾點，小安都在。用文字說出你的困境，我們認真傾聽每一句話。',
+    title: '24 小时倾听',
+    desc: '无论几点，小安都在。用文字说出你的困境，我们认真倾听每一句话。',
   },
   {
     icon: '🛡️',
-    title: '隱私保護',
-    desc: '對話不留記錄於本設備，頁面右上角「快速離開」可一鍵清除並跳離。',
+    title: '隐私保护',
+    desc: '对话不留记录于本设备，页面右上角「快速离开」可一键清除并跳离。',
   },
   {
     icon: '📋',
-    title: '資源導航',
-    desc: '提供庇護所、法律援助、心理諮詢等資源信息，幫你找到下一步。',
+    title: '资源导航',
+    desc: '提供庇护所、法律援助、心理咨询等资源信息，帮你找到下一步。',
   },
   {
     icon: '❤️',
     title: '非批判陪伴',
-    desc: '這裡沒有指責，只有支持。你的感受是真實的，你的選擇值得被尊重。',
+    desc: '这里没有指责，只有支持。你的感受是真实的，你的选择值得被尊重。',
   },
 ]
 
 const faqs = [
   {
-    q: '我的對話記錄會被保存嗎？',
-    a: '小安不會在你的設備上長期保存對話內容。使用完畢後，建議點擊「快速離開」按鈕清除當前記錄。',
+    q: '我的对话记录会被保存吗？',
+    a: '小安不会在你的设备上长期保存对话内容。使用完毕后，建议点击「快速离开」按钮清除当前记录。',
   },
   {
-    q: '如果我身處危險，小安能幫我嗎？',
-    a: '如果你現在面臨緊急危險，請立即撥打 110 報警。小安可以提供情感支持和資源信息，但無法替代緊急救援服務。',
+    q: '如果我身处危险，小安能帮我吗？',
+    a: '如果你现在面临紧急危险，请立即拨打 110 报警。小安可以提供情感支持和资源信息，但无法替代紧急救援服务。',
   },
   {
-    q: '我需要先確認自己是不是「家暴受害者」才能使用嗎？',
-    a: '不需要。只要你感到不安全、受到傷害或需要傾訴，都可以找小安聊。',
+    q: '我需要先确认自己是不是「家暴受害者」才能使用吗？',
+    a: '不需要。只要你感到不安全、受到伤害或需要倾诉，都可以找小安聊。',
   },
   {
-    q: '小安是真人還是AI？',
-    a: '小安是一個AI助手，由人工智能驅動。它不能替代專業心理諮詢師或社工，但可以在你需要時第一時間陪伴你。',
+    q: '小安是真人还是AI？',
+    a: '小安是一个AI助手，由人工智能驱动。它不能替代专业心理咨询师或社工，但可以在你需要时第一时间陪伴你。',
   },
 ]
 
@@ -87,10 +88,10 @@ const LandingPage: FC = () => {
               fontWeight: 400,
             }}
           >
-            你不是一個人，小安在這裡陪你。
+            你不是一个人，小安在这里陪你。
           </p>
           <p style={{ fontSize: 14, color: '#8F7E6E', marginBottom: 40 }}>
-            反家庭暴力 AI 助手 · 安全 · 保密 · 隨時在線
+            反家庭暴力 AI 助手 · 安全 · 保密 · 随时在线
           </p>
           <Link
             href="/chat"
@@ -108,16 +109,16 @@ const LandingPage: FC = () => {
               letterSpacing: '0.04em',
             }}
           >
-            開始傾訴 →
+            开始倾诉 →
           </Link>
           <p style={{ fontSize: 12, color: '#B5A898', marginTop: 16 }}>
-            緊急情況請立撥&nbsp;
+            紧急情况请立拨&nbsp;
             <a href={`tel:${EMERGENCY_HOTLINE}`} style={{ color: '#E8A87C', fontWeight: 700 }}>
-              {EMERGENCY_HOTLINE}（報警）
+              {EMERGENCY_HOTLINE}（报警）
             </a>
             &nbsp;或&nbsp;
             <a href={`tel:${DOMESTIC_VIOLENCE_HOTLINE}`} style={{ color: '#7CB9A8', fontWeight: 700 }}>
-              {DOMESTIC_VIOLENCE_HOTLINE}（婦女熱線）
+              {DOMESTIC_VIOLENCE_HOTLINE}（妇女热线）
             </a>
           </p>
         </div>
@@ -127,7 +128,6 @@ const LandingPage: FC = () => {
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '60px 24px' }}>
         <h2
           style={{
-            fontFamily: '\'Noto Serif SC\', serif',
             fontSize: 22,
             fontWeight: 600,
             textAlign: 'center',
@@ -135,7 +135,7 @@ const LandingPage: FC = () => {
             color: '#3D3028',
           }}
         >
-          小安能為你做什麼
+          小安能为你做什么
         </h2>
         <div
           style={{
@@ -162,7 +162,6 @@ const LandingPage: FC = () => {
                   fontWeight: 700,
                   marginBottom: 8,
                   color: '#3D3028',
-                  fontFamily: '\'Noto Serif SC\', serif',
                 }}
               >
                 {f.title}
@@ -187,19 +186,18 @@ const LandingPage: FC = () => {
           <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
           <h2
             style={{
-              fontFamily: '\'Noto Serif SC\', serif',
               fontSize: 18,
               fontWeight: 600,
               marginBottom: 12,
               color: '#2C6B5E',
             }}
           >
-            你的隱私是我們的首要承諾
+            你的隐私是我们的首要承诺
           </h2>
           <p style={{ fontSize: 14, color: '#4A9585', lineHeight: 1.8 }}>
-            小安不會收集你的個人身份信息。對話內容僅用於本次會話，不會在你的設備上長期保存。
-            如果你擔心被人看到，可以隨時點擊右上角<strong>「快速離開」</strong>，
-            它會清除記錄並立即跳轉到其他頁面，瀏覽器也不會留下返回記錄。
+            小安不会收集你的个人身份信息。对话内容仅用于本次会话，不会在你的设备上长期保存。
+            如果你担心被人看到，可以随时点击右上角<strong>「快速离开」</strong>，
+            它会清除记录并立即跳转到其他页面，浏览器也不会留下返回记录。
           </p>
         </div>
       </section>
@@ -208,7 +206,6 @@ const LandingPage: FC = () => {
       <section style={{ maxWidth: 680, margin: '0 auto', padding: '60px 24px' }}>
         <h2
           style={{
-            fontFamily: '\'Noto Serif SC\', serif',
             fontSize: 20,
             fontWeight: 600,
             textAlign: 'center',
@@ -216,7 +213,7 @@ const LandingPage: FC = () => {
             color: '#3D3028',
           }}
         >
-          常見問題
+          常见问题
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {faqs.map(faq => (
@@ -253,6 +250,62 @@ const LandingPage: FC = () => {
         </div>
       </section>
 
+      {/* ─── Contact ──────────────────────────────── */}
+      <section style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#3D3028', marginBottom: 10 }}>
+            联系我们
+          </h2>
+          <p style={{ fontSize: 14, color: '#8F7E6E', lineHeight: 1.8, maxWidth: 480, margin: '0 auto' }}>
+            如有合作意向、问题反馈或需要进一步帮助，欢迎通过以下方式联系我们，或在下方直接留言。
+          </p>
+        </div>
+
+        {/* Contact info cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16,
+          marginBottom: 40,
+        }}>
+          {[
+            { icon: '📱', label: '联系电话', value: '请联系机构负责人' },
+            { icon: '💬', label: '微信公众号', value: '请联系机构负责人' },
+            { icon: '✉️', label: '电子邮件', value: '请联系机构负责人' },
+          ].map(item => (
+            <div key={item.label} style={{
+              backgroundColor: '#fff',
+              border: '1px solid #E6DDD5',
+              borderRadius: 12,
+              padding: '20px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>{item.icon}</div>
+              <div style={{ fontSize: 12, color: '#B5A898', marginBottom: 4 }}>{item.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#5C4D3E' }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Leave a message */}
+        <div style={{
+          backgroundColor: '#fff',
+          border: '1px solid #E6DDD5',
+          borderRadius: 16,
+          padding: '32px 28px',
+          boxShadow: '0 2px 12px rgba(74,66,56,0.06)',
+        }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#3D3028', marginBottom: 4 }}>
+            给我们留言
+          </h3>
+          <p style={{ fontSize: 12, color: '#B5A898', marginBottom: 20 }}>
+            留言将由团队查看，不会公开显示。
+          </p>
+          <ContactForm />
+        </div>
+      </section>
+
       {/* ─── Footer ───────────────────────────────── */}
       <footer
         style={{
@@ -263,21 +316,21 @@ const LandingPage: FC = () => {
         }}
       >
         <p style={{ fontSize: 13, fontWeight: 700, color: '#3D3028', marginBottom: 8 }}>
-          緊急求助熱線
+          紧急求助热线
         </p>
         <p style={{ fontSize: 14, color: '#5C4D3E', marginBottom: 16 }}>
           <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 700, marginRight: 24 }}>
-            110 報警
+            110 报警
           </a>
           <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 700, marginRight: 24 }}>
-            12338 婦女熱線
+            12338 妇女热线
           </a>
           <a href="tel:120" style={{ color: '#C8905A', fontWeight: 700 }}>
             120 急救
           </a>
         </p>
         <p style={{ fontSize: 12, color: '#B5A898' }}>
-          © {new Date().getFullYear()} 小安 反家暴AI助手 · 如有需要請聯繫當地社會服務機構
+          © {new Date().getFullYear()} 小安 反家暴AI助手 · 如有需要请联系当地社会服务机构
         </p>
       </footer>
     </div>

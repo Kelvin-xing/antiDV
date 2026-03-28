@@ -39,7 +39,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
         setInputError('')
         const ok = setHash(inputValue)
         if (!ok) {
-            setInputError('格式不正確，請輸入完整的 UUID（例如：xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx）')
+            setInputError('格式不正确，请输入完整的 UUID（例如：xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx）')
             return
         }
         setInputValue('')
@@ -54,8 +54,8 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-semibold" style={{ color: '#3D2C1E', fontFamily: "'Noto Serif SC', serif" }}>
-                        🔑 我的身份識別碼
+                    <h2 className="text-lg font-semibold" style={{ color: '#3D2C1E' }}>
+                        🔑 我的身份识别码
                     </h2>
                     <button
                         onClick={onClose}
@@ -68,12 +68,12 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
 
                 {/* Privacy notice */}
                 <p className="text-xs mb-5 leading-relaxed" style={{ color: '#8C7B6E' }}>
-                    小安不需要你的姓名或任何個人資料。這個識別碼是你和聊天記錄之間唯一的連結——請妥善保存，換設備時可憑此找回記錄。
+                    小安不需要你的姓名或任何个人资料。这个识别码是你和聊天记录之间唯一的连结——请妥善保存，换设备时可凭此找回记录。
                 </p>
 
                 {/* Current hash display */}
                 <div className="mb-4">
-                    <div className="text-xs font-medium mb-1" style={{ color: '#5C4D3E' }}>你的識別碼</div>
+                    <div className="text-xs font-medium mb-1" style={{ color: '#5C4D3E' }}>你的识别码</div>
                     {currentHash
                         ? (
                             <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                                     className="flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
                                     style={{ backgroundColor: copied ? '#7CB9A8' : '#E8A87C', color: '#fff' }}
                                 >
-                                    {copied ? '已複製 ✓' : '複製'}
+                                    {copied ? '已复制 ✓' : '复制'}
                                 </button>
                             </div>
                         )
@@ -97,7 +97,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                                 className="rounded-lg px-3 py-2 text-xs"
                                 style={{ backgroundColor: '#F2EDE8', color: '#B5A898' }}
                             >
-                                尚未生成識別碼
+                                尚未生成识别码
                             </div>
                         )}
                 </div>
@@ -109,15 +109,15 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                             className="rounded-lg p-3 mb-4 text-xs"
                             style={{ backgroundColor: '#FFF3CD', border: '1px solid #FFCC80', color: '#7B5800' }}
                         >
-                            <p className="font-medium mb-2">⚠️ 確定要生成新識別碼？</p>
-                            <p className="mb-3">舊識別碼對應的聊天記錄將無法通過新識別碼找回（你可以改輸入舊識別碼來恢復）。</p>
+                            <p className="font-medium mb-2">⚠️ 确定要生成新识别码？</p>
+                            <p className="mb-3">旧识别码对应的聊天记录将无法通过新识别码找回（你可以改输入旧识别码来恢复）。</p>
                             <div className="flex gap-2">
                                 <button
                                     onClick={handleConfirmGenerate}
                                     className="px-3 py-1 rounded-md text-white text-xs"
                                     style={{ backgroundColor: '#E8734A' }}
                                 >
-                                    確定生成
+                                    确定生成
                                 </button>
                                 <button
                                     onClick={() => setShowNewWarning(false)}
@@ -135,19 +135,19 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                             className="w-full py-2 rounded-lg text-sm font-medium mb-4 transition-colors"
                             style={{ backgroundColor: '#E8A87C', color: '#fff' }}
                         >
-                            {currentHash ? '重新生成識別碼' : '生成我的識別碼'}
+                            {currentHash ? '重新生成识别码' : '生成我的识别码'}
                         </button>
                     )}
 
                 {/* Input existing hash */}
                 <div className="border-t pt-4" style={{ borderColor: '#E6DDD5' }}>
-                    <div className="text-xs font-medium mb-2" style={{ color: '#5C4D3E' }}>換設備？輸入已有識別碼</div>
+                    <div className="text-xs font-medium mb-2" style={{ color: '#5C4D3E' }}>换设备？输入已有识别码</div>
                     <div className="flex gap-2">
                         <input
                             type="text"
                             value={inputValue}
                             onChange={e => setInputValue(e.target.value)}
-                            placeholder="貼上你的識別碼..."
+                            placeholder="粘贴你的识别码..."
                             className="flex-1 rounded-lg px-3 py-2 text-xs outline-none"
                             style={{ backgroundColor: '#F2EDE8', border: '1px solid #E6DDD5', color: '#3D2C1E' }}
                         />
@@ -157,7 +157,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                             className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                             style={{ backgroundColor: '#7CB9A8', color: '#fff' }}
                         >
-                            確認
+                            确认
                         </button>
                     </div>
                     {inputError && (
@@ -172,7 +172,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
                         className="w-full mt-4 py-1.5 rounded-lg text-xs transition-colors"
                         style={{ color: '#B5A898' }}
                     >
-                        清除識別碼（切換為匿名模式）
+                        清除识别码（切换为匿名模式）
                     </button>
                 )}
             </div>

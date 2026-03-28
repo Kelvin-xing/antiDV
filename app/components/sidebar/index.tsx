@@ -55,7 +55,7 @@ const Sidebar: FC<ISidebarProps> = ({
 
   return (
     <div
-      className="shrink-0 flex flex-col overflow-y-auto pc:w-[244px] tablet:w-[192px] mobile:w-[240px] tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
+      className="shrink-0 flex flex-col pc:w-[244px] tablet:w-[192px] mobile:w-[240px] tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
       style={{ backgroundColor: '#FAF6F2', borderRight: '1px solid #E6DDD5' }}
     >
       {/* New chat + Clear all row */}
@@ -73,7 +73,7 @@ const Sidebar: FC<ISidebarProps> = ({
             onClick={() => setConfirmClearAll(true)}
             className="flex-shrink-0 h-9 px-2 rounded-lg text-xs transition-colors"
             style={{ backgroundColor: '#F5E6D3', color: '#C26F3A' }}
-            title="清空全部對話"
+            title="清空全部对话"
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -86,13 +86,13 @@ const Sidebar: FC<ISidebarProps> = ({
           className="mx-4 mt-3 rounded-lg p-3 text-xs"
           style={{ backgroundColor: '#FFF3CD', border: '1px solid #FFCC80', color: '#7B5800' }}
         >
-          <p className="font-medium mb-2">確定清空全部對話？此操作無法復原。</p>
+          <p className="font-medium mb-2">确定清空全部对话？此操作无法撤销。</p>
           <div className="flex gap-2">
             <button
               onClick={() => { onClearAll(); setConfirmClearAll(false) }}
               className="px-2 py-1 rounded-md text-white"
               style={{ backgroundColor: '#E8734A' }}
-            >確定</button>
+            >确定</button>
             <button
               onClick={() => setConfirmClearAll(false)}
               className="px-2 py-1 rounded-md"
@@ -102,7 +102,7 @@ const Sidebar: FC<ISidebarProps> = ({
         </div>
       )}
 
-      <nav className="mt-4 flex-1 space-y-1 p-4 !pt-0" style={{ backgroundColor: '#FAF6F2' }}>
+      <nav className="mt-4 flex-1 min-h-0 overflow-y-auto space-y-1 p-4 !pt-0" style={{ backgroundColor: '#FAF6F2' }}>
         {list.map((item) => {
           const isCurrent = item.id === currentId
           const isConfirmingDelete = confirmDeleteId === item.id
@@ -132,7 +132,7 @@ const Sidebar: FC<ISidebarProps> = ({
                     onClick={e => handleDeleteClick(e, item.id)}
                     className="opacity-0 group-hover:opacity-100 ml-1 p-1 rounded transition-opacity"
                     style={{ color: '#B5A898' }}
-                    title="刪除此對話"
+                    title="删除此对话"
                   >
                     <TrashIcon className="h-3.5 w-3.5" />
                   </button>
@@ -144,13 +144,13 @@ const Sidebar: FC<ISidebarProps> = ({
                   className="mx-1 mb-1 rounded-lg p-2 text-xs"
                   style={{ backgroundColor: '#FFF3CD', border: '1px solid #FFCC80', color: '#7B5800' }}
                 >
-                  <p className="mb-1.5">確定刪除此對話？</p>
+                  <p className="mb-1.5">确定删除此对话？</p>
                   <div className="flex gap-1.5">
                     <button
                       onClick={handleConfirmDelete}
                       className="px-2 py-0.5 rounded text-white"
                       style={{ backgroundColor: '#E8734A' }}
-                    >確定</button>
+                    >确定</button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}
                       className="px-2 py-0.5 rounded"
@@ -171,7 +171,7 @@ const Sidebar: FC<ISidebarProps> = ({
           className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
           style={{ backgroundColor: '#F2EDE8', color: '#8C7B6E', border: '1px solid #E6DDD5' }}
         >
-          🔑 我的身份識別碼
+          🔑 我的身份识别码
         </button>
       </div>
 
