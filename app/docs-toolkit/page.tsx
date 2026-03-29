@@ -3,128 +3,134 @@
 import Link from 'next/link'
 import { templates } from './templates'
 
+/* Inline SVG doc icon — folded-corner rectangle */
+const SvgDocIcon = () => (
+    <svg width="24" height="28" viewBox="0 0 24 28" fill="none" stroke="#7A6B5D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="文档">
+        <path d="M14 1H4a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9z" />
+        <polyline points="14 1 14 9 22 9" />
+    </svg>
+)
+
+const focusStyle = `
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+a:focus-visible { outline: 2px solid #E8A87C; outline-offset: 2px; }
+`
+
 export default function DocsToolkitPage() {
     return (
-        <div style={{ minHeight: '100vh', background: '#FBF8F4' }}>
-            {/* Header */}
-            <header style={{
-                padding: '16px 24px',
-                borderBottom: '1px solid #E6DDD5',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                background: '#fff',
-            }}>
-                <Link href="/" style={{ color: '#E8A87C', textDecoration: 'none', fontFamily: "'Noto Sans SC', sans-serif", fontSize: 14 }}>
-                    ← 返回首页
-                </Link>
-            </header>
+        <div style={{
+            minHeight: '100vh',
+            background: '#FBF8F4',
+            fontFamily: "'Noto Sans SC', system-ui, sans-serif",
+            color: '#3D3028',
+        }}>
+            <style dangerouslySetInnerHTML={{ __html: focusStyle }} />
 
-            {/* Hero */}
-            <section style={{
-                padding: '48px 24px 32px',
+            {/* Masthead — dark, consistent with Stories page */}
+            <header style={{
+                backgroundColor: '#3D3028',
+                padding: '48px 24px',
                 textAlign: 'center',
-                background: 'linear-gradient(135deg, #FBF8F4 0%, #f0ebe4 100%)',
             }}>
+                <Link
+                    href="/"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: 14,
+                        color: '#E8A87C',
+                        textDecoration: 'none',
+                        marginBottom: 32,
+                        minHeight: 44,
+                    }}
+                >
+                    ← 首页
+                </Link>
                 <h1 style={{
                     fontFamily: "'Noto Serif SC', serif",
-                    fontSize: 28,
-                    color: '#3D3028',
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: '#FBF8F4',
                     marginBottom: 12,
                 }}>
-                    📄 文档工具库
+                    文档工具库
                 </h1>
                 <p style={{
-                    fontFamily: "'Noto Sans SC', sans-serif",
-                    fontSize: 15,
-                    color: '#8F7E6E',
+                    fontSize: 16,
+                    color: '#B5A898',
                     maxWidth: 520,
-                    margin: '0 auto',
+                    margin: '0 auto 16px',
                     lineHeight: 1.7,
                 }}>
-                    我们为您准备了常用法律文书模板，只需填写关键信息即可生成规范文档。所有信息仅在您的设备上处理，不会上传至服务器。
+                    填写关键信息，即可生成规范文档
                 </p>
-            </section>
+                <p style={{
+                    fontSize: 13,
+                    color: '#D4C4B8',
+                    maxWidth: 480,
+                    margin: '0 auto',
+                    lineHeight: 1.6,
+                }}>
+                    所有信息仅在您的设备上处理，不会上传至服务器
+                </p>
+            </header>
 
-            {/* Template Cards */}
-            <section style={{ padding: '24px 24px 64px', maxWidth: 800, margin: '0 auto' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {templates.map(t => (
+            {/* Template Rows */}
+            <main style={{ padding: '40px 24px 64px', maxWidth: 800, margin: '0 auto' }}>
+                {templates.map((t, i) => (
+                    <article key={t.id}>
+                        {i > 0 && <hr style={{ border: 'none', borderTop: '1px solid #E6DDD5', margin: 0 }} />}
                         <Link
-                            key={t.id}
                             href={`/docs-toolkit/${t.id}`}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'flex-start', gap: 16, padding: '28px 0' }}
                         >
-                            <div style={{
-                                background: '#fff',
-                                borderRadius: 12,
-                                padding: '24px 28px',
-                                border: '1px solid #E6DDD5',
-                                transition: 'box-shadow 0.2s, transform 0.2s',
-                                cursor: 'pointer',
-                            }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'
-                                        ; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
-                                        ; (e.currentTarget as HTMLDivElement).style.transform = 'none'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                                    <span style={{ fontSize: 36 }}>{t.icon}</span>
-                                    <div style={{ flex: 1 }}>
-                                        <h2 style={{
-                                            fontFamily: "'Noto Serif SC', serif",
-                                            fontSize: 18,
-                                            color: '#3D3028',
-                                            marginBottom: 8,
-                                        }}>
-                                            {t.name}
-                                        </h2>
-                                        <p style={{
-                                            fontFamily: "'Noto Sans SC', sans-serif",
-                                            fontSize: 14,
-                                            color: '#8F7E6E',
-                                            lineHeight: 1.6,
-                                            marginBottom: 12,
-                                        }}>
-                                            {t.description}
-                                        </p>
-                                        <span style={{
-                                            fontFamily: "'Noto Sans SC', sans-serif",
-                                            fontSize: 13,
-                                            color: '#E8A87C',
-                                            fontWeight: 500,
-                                        }}>
-                                            开始填写 →
-                                        </span>
-                                    </div>
-                                </div>
+                            <div style={{ flexShrink: 0, paddingTop: 2 }}>
+                                <SvgDocIcon />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <h2 style={{
+                                    fontFamily: "'Noto Serif SC', serif",
+                                    fontSize: 18,
+                                    color: '#3D3028',
+                                    marginBottom: 8,
+                                }}>
+                                    {t.name}
+                                </h2>
+                                <p style={{
+                                    fontSize: 16,
+                                    color: '#5C4D3E',
+                                    lineHeight: 1.7,
+                                    marginBottom: 8,
+                                }}>
+                                    {t.description}
+                                </p>
+                                <span style={{
+                                    fontSize: 13,
+                                    color: '#E8A87C',
+                                    fontWeight: 500,
+                                    float: 'right',
+                                }}>
+                                    开始填写 →
+                                </span>
                             </div>
                         </Link>
-                    ))}
-                </div>
+                    </article>
+                ))}
 
                 {/* Disclaimer */}
-                <div style={{
-                    marginTop: 32,
-                    padding: '16px 20px',
-                    background: '#FFF8F0',
-                    borderRadius: 8,
-                    border: '1px solid #F0DCC8',
-                }}>
+                <div style={{ borderTop: '1px solid #E6DDD5', paddingTop: 24, marginTop: 12 }}>
                     <p style={{
-                        fontFamily: "'Noto Sans SC', sans-serif",
-                        fontSize: 13,
-                        color: '#8F7E6E',
+                        fontSize: 16,
+                        color: '#7A6B5D',
                         lineHeight: 1.7,
                     }}>
-                        ⚠️ <strong>免责声明：</strong>以上模板仅供参考，不构成法律建议。具体法律问题请咨询专业律师或拨打法律援助热线 <strong>12348</strong>。
+                        <strong>免责声明：</strong>以上模板仅供参考，不构成法律建议。具体法律问题请咨询专业律师或拨打法律援助热线 <strong>12348</strong>。
                     </p>
                 </div>
-            </section>
+            </main>
         </div>
     )
 }

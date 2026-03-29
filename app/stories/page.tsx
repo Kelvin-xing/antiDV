@@ -2,6 +2,13 @@ import type { FC } from 'react'
 import Link from 'next/link'
 import { stories } from './data'
 
+const focusStyle = `
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+a:focus-visible { outline: 2px solid #E8A87C; outline-offset: 2px; }
+`
+
 const StoriesPage: FC = () => {
     return (
         <div
@@ -9,14 +16,16 @@ const StoriesPage: FC = () => {
                 minHeight: '100vh',
                 backgroundColor: '#FBF8F4',
                 fontFamily: "'Noto Sans SC', system-ui, sans-serif",
-                color: '#4A4238',
+                color: '#3D3028',
             }}
         >
-            {/* Header */}
-            <div
+            <style dangerouslySetInnerHTML={{ __html: focusStyle }} />
+
+            {/* Masthead */}
+            <header
                 style={{
-                    background: 'linear-gradient(160deg, #F5E6D3 0%, #FBF8F4 60%)',
-                    padding: '40px 24px 32px',
+                    backgroundColor: '#3D3028',
+                    padding: '48px 24px',
                     textAlign: 'center',
                 }}
             >
@@ -27,82 +36,97 @@ const StoriesPage: FC = () => {
                         alignItems: 'center',
                         gap: 6,
                         fontSize: 14,
-                        color: '#8F7E6E',
+                        color: '#E8A87C',
                         textDecoration: 'none',
-                        marginBottom: 24,
+                        marginBottom: 32,
+                        minHeight: 44,
                     }}
                 >
-                    ← 返回首页
+                    ← 首页
                 </Link>
-                <div style={{ fontSize: 48, marginBottom: 8 }}>📖</div>
                 <h1
                     style={{
                         fontFamily: "'Noto Serif SC', serif",
-                        fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                        fontSize: 32,
                         fontWeight: 700,
-                        color: '#3D3028',
+                        color: '#FBF8F4',
                         marginBottom: 12,
                     }}
                 >
                     受害者故事
                 </h1>
-                <p style={{ fontSize: 14, color: '#8F7E6E', maxWidth: 480, margin: '0 auto', lineHeight: 1.8 }}>
-                    每一个故事都是真实的力量。她们走过来了，你也可以。
-                    <br />
-                    <span style={{ fontSize: 12 }}>（以下人物均为化名，故事经过改编以保护隐私）</span>
+                <p style={{ fontSize: 16, color: '#B5A898', fontStyle: 'italic', marginBottom: 16 }}>
+                    每一个故事都是真实的力量
                 </p>
-            </div>
+                <div style={{ width: 64, height: 1, backgroundColor: '#E8A87C', margin: '0 auto 16px' }} />
+                <p style={{ fontSize: 13, color: '#D4C4B8', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
+                    以下内容涉及家庭暴力经历，如感到不适请随时暂停。
+                    <br />
+                    <span style={{ fontSize: 12 }}>（所有人物均为化名，故事经过改编以保护隐私）</span>
+                </p>
+            </header>
 
-            {/* Cards grid */}
-            <section style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>
+            {/* Story List */}
+            <main style={{ maxWidth: 800, margin: '0 auto', padding: '48px 24px 80px' }}>
                 <div
                     style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                        gap: 20,
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                        gap: 0,
                     }}
                 >
                     {stories.map(s => (
-                        <Link
+                        <article
                             key={s.id}
-                            href={`/stories/${s.id}`}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            style={{
+                                borderBottom: '1px solid #E6DDD5',
+                                padding: '28px 0',
+                            }}
                         >
-                            <div
-                                style={{
-                                    backgroundColor: '#fff',
-                                    border: '1px solid #E6DDD5',
-                                    borderRadius: 16,
-                                    padding: '28px 20px',
-                                    textAlign: 'center',
-                                    cursor: 'pointer',
-                                    transition: 'box-shadow 0.2s, transform 0.2s',
-                                }}
-                                onMouseEnter={undefined}
+                            <Link
+                                href={`/stories/${s.id}`}
+                                style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'flex-start', gap: 16 }}
                             >
-                                <div style={{ fontSize: 48, marginBottom: 12 }}>{s.avatar}</div>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: '#3D3028' }}>
-                                    {s.name}
-                                </h3>
-                                <p style={{ fontSize: 13, color: '#5C4D3E', lineHeight: 1.7 }}>
-                                    {s.summary}
-                                </p>
-                                <span
+                                {/* Initials circle */}
+                                <div
                                     style={{
-                                        display: 'inline-block',
-                                        marginTop: 12,
-                                        fontSize: 12,
-                                        color: '#E8A87C',
-                                        fontWeight: 600,
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#F5E6D3',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
                                     }}
                                 >
-                                    阅读故事 →
-                                </span>
-                            </div>
-                        </Link>
+                                    <span
+                                        style={{
+                                            fontFamily: "'Noto Serif SC', serif",
+                                            fontSize: 20,
+                                            fontWeight: 700,
+                                            color: '#3D3028',
+                                        }}
+                                    >
+                                        {s.name.charAt(0)}
+                                    </span>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#3D3028' }}>
+                                        {s.name}
+                                    </h3>
+                                    <p style={{ fontSize: 16, color: '#5C4D3E', lineHeight: 1.7, marginBottom: 8 }}>
+                                        {s.summary}
+                                    </p>
+                                    <span style={{ fontSize: 13, color: '#E8A87C', fontWeight: 500 }}>
+                                        阅读故事 →
+                                    </span>
+                                </div>
+                            </Link>
+                        </article>
                     ))}
                 </div>
-            </section>
+            </main>
         </div>
     )
 }

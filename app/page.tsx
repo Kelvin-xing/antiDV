@@ -3,42 +3,98 @@ import React from 'react'
 import Link from 'next/link'
 import ContactForm from '@/app/components/contact-form'
 
-const EMERGENCY_HOTLINE = '110'
-const DOMESTIC_VIOLENCE_HOTLINE = '12338'
+/* ── Inline SVG Icons (stroke 1.5, 20×20, no external deps) ── */
+const IconChat = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="对话">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+)
+const IconShield = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="隐私保护">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+)
+const IconMapPin = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="资源导航">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+)
+const IconHeart = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="非批判陪伴">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+)
+const IconBook = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="受害者故事">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+  </svg>
+)
+const IconDoc = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="文档工具库">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+)
+const IconPhone = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="电话">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+)
+const IconMail = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="邮件">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <polyline points="22,7 12,13 2,7" />
+  </svg>
+)
+const IconWechat = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="微信">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
 
 const features = [
   {
-    icon: '💬',
+    icon: <IconChat />,
     title: '24 小时倾听',
     desc: '无论几点，小安都在。用文字说出你的困境，我们认真倾听每一句话。',
+    num: '01',
   },
   {
-    icon: '🛡️',
+    icon: <IconShield />,
     title: '隐私保护',
     desc: '对话不留记录于本设备，页面右上角「快速离开」可一键清除并跳离。',
+    num: '02',
   },
   {
-    icon: '📋',
+    icon: <IconMapPin />,
     title: '资源导航',
     desc: '提供庇护所、法律援助、心理咨询等资源信息，帮你找到下一步。',
     link: '/resources',
+    num: '03',
   },
   {
-    icon: '❤️',
+    icon: <IconHeart />,
     title: '非批判陪伴',
     desc: '这里没有指责，只有支持。你的感受是真实的，你的选择值得被尊重。',
+    num: '04',
   },
   {
-    icon: '📖',
+    icon: <IconBook />,
     title: '受害者故事',
     desc: '阅读走出困境的真实故事，你并不孤单，她们也曾和你一样。',
     link: '/stories',
+    num: '05',
   },
   {
-    icon: '📄',
+    icon: <IconDoc />,
     title: '文档工具库',
     desc: '人身保护令、告诫书等法律文书模板，填写即可生成下载。',
     link: '/docs-toolkit',
+    num: '06',
   },
 ]
 
@@ -61,247 +117,227 @@ const faqs = [
   },
 ]
 
+const reducedMotionStyle = `
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+details[open] summary .faq-arrow { transform: rotate(90deg); }
+details summary .faq-arrow { transition: transform 200ms ease-out; display: inline-block; }
+summary::-webkit-details-marker { display: none; }
+summary::marker { display: none; }
+a:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid #E8A87C; outline-offset: 2px;
+}
+`
+
 const LandingPage: FC = () => {
   return (
     <div
       style={{
         minHeight: '100vh',
         backgroundColor: '#FBF8F4',
-        fontFamily: '\'Noto Sans SC\', system-ui, sans-serif',
-        color: '#4A4238',
+        fontFamily: "'Noto Sans SC', system-ui, sans-serif",
+        color: '#3D3028',
       }}
     >
+      <style dangerouslySetInnerHTML={{ __html: reducedMotionStyle }} />
+
       {/* ─── Hero ─────────────────────────────────── */}
-      <section
-        style={{
-          background: 'linear-gradient(160deg, #F5E6D3 0%, #FBF8F4 60%)',
-          padding: '80px 24px 60px',
-          textAlign: 'center',
-        }}
-      >
+      <section style={{ padding: '96px 24px 72px' }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
-          <div style={{ fontSize: 56, marginBottom: 8 }}>🕊️</div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              border: '1px solid #E8A87C',
+              borderRadius: 4,
+              padding: '6px 14px',
+              marginBottom: 32,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#E8A87C', display: 'inline-block' }} />
+            <span style={{ fontSize: 12, color: '#5C4D3E', letterSpacing: '0.06em' }}>反家庭暴力 AI 助手</span>
+          </div>
+
           <h1
             style={{
-              fontFamily: '\'Noto Serif SC\', serif',
-              fontSize: 'clamp(2rem, 5vw, 3rem)',
+              fontFamily: "'Noto Serif SC', serif",
+              fontSize: 'clamp(3rem, 8vw, 5rem)',
               fontWeight: 700,
               color: '#3D3028',
-              marginBottom: 16,
-              lineHeight: 1.3,
+              marginBottom: 24,
+              lineHeight: 1.1,
             }}
           >
             小安
           </h1>
-          <p
-            style={{
-              fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
-              color: '#5C4D3E',
-              marginBottom: 8,
-              fontWeight: 400,
-            }}
-          >
-            你不是一个人，小安在这里陪你。
+
+          <div style={{ borderLeft: '3px solid #E8A87C', paddingLeft: 16, marginBottom: 12 }}>
+            <p
+              style={{
+                fontSize: 18,
+                color: '#5C4D3E',
+                fontWeight: 400,
+                lineHeight: 1.6,
+              }}
+            >
+              你不是一个人，小安在这里陪你。
+            </p>
+          </div>
+
+          <p style={{ fontSize: 14, color: '#7A6B5D', marginBottom: 40 }}>
+            安全 · 保密 · 随时在线
           </p>
-          <p style={{ fontSize: 14, color: '#8F7E6E', marginBottom: 40 }}>
-            反家庭暴力 AI 助手 · 安全 · 保密 · 随时在线
-          </p>
+
           <Link
             href="/chat"
             style={{
               display: 'inline-block',
               backgroundColor: '#E8A87C',
               color: '#fff',
-              borderRadius: 28,
-              padding: '14px 40px',
+              borderRadius: 4,
+              padding: '14px 36px',
               fontSize: 16,
               fontWeight: 700,
               textDecoration: 'none',
-              boxShadow: '0 4px 16px rgba(232,168,124,0.4)',
-              transition: 'background-color 0.2s',
-              letterSpacing: '0.04em',
+              transition: 'opacity 200ms ease-out',
+              minHeight: 48,
             }}
           >
             开始倾诉 →
           </Link>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-            <Link
-              href="/stories"
-              style={{
-                display: 'inline-block',
-                backgroundColor: '#fff',
-                color: '#E8A87C',
-                borderRadius: 28,
-                padding: '10px 28px',
-                fontSize: 14,
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1.5px solid #E8A87C',
-                transition: 'background-color 0.2s',
-              }}
-            >
-              📖 受害者故事
+
+          <div style={{ marginTop: 20 }}>
+            <Link href="/stories" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 24 }}>
+              受害者故事
             </Link>
-            <Link
-              href="/docs-toolkit"
-              style={{
-                display: 'inline-block',
-                backgroundColor: '#fff',
-                color: '#E8A87C',
-                borderRadius: 28,
-                padding: '10px 28px',
-                fontSize: 14,
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1.5px solid #E8A87C',
-                transition: 'background-color 0.2s',
-              }}
-            >
-              📄 文档工具库
+            <Link href="/docs-toolkit" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              文档工具库
             </Link>
           </div>
-          <p style={{ fontSize: 12, color: '#B5A898', marginTop: 16 }}>
-            紧急情况请立拨&nbsp;
-            <a href={`tel:${EMERGENCY_HOTLINE}`} style={{ color: '#E8A87C', fontWeight: 700 }}>
-              {EMERGENCY_HOTLINE}（报警）
-            </a>
+
+          <p style={{ fontSize: 13, color: '#7A6B5D', marginTop: 24 }}>
+            紧急情况请拨&nbsp;
+            <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 600 }}>110</a>
             &nbsp;或&nbsp;
-            <a href={`tel:${DOMESTIC_VIOLENCE_HOTLINE}`} style={{ color: '#7CB9A8', fontWeight: 700 }}>
-              {DOMESTIC_VIOLENCE_HOTLINE}（妇女热线）
-            </a>
+            <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 600 }}>12338（妇女热线）</a>
           </p>
         </div>
       </section>
 
-      {/* ─── Features ─────────────────────────────── */}
-      <section style={{ maxWidth: 900, margin: '0 auto', padding: '60px 24px' }}>
-        <h2
-          style={{
-            fontSize: 22,
-            fontWeight: 600,
-            textAlign: 'center',
-            marginBottom: 40,
-            color: '#3D3028',
-          }}
-        >
-          小安能为你做什么
-        </h2>
+      {/* ─── Features (Editorial Rows) ────────────── */}
+      <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 72px' }}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 20,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: 0,
           }}
         >
           {features.map(f => {
-            const card = (
+            const row = (
               <div
                 key={f.title}
                 style={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E6DDD5',
-                  borderRadius: 16,
-                  padding: '24px 20px',
-                  textAlign: 'center',
-                  transition: f.link ? 'box-shadow 0.2s, transform 0.2s' : undefined,
-                  cursor: f.link ? 'pointer' : undefined,
+                  borderBottom: '1px solid #E6DDD5',
+                  padding: '28px 0',
+                  display: 'flex',
+                  gap: 16,
+                  alignItems: 'flex-start',
                 }}
               >
-                <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
-                <h3
+                <span
+                  aria-hidden="true"
                   style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    marginBottom: 8,
-                    color: '#3D3028',
+                    fontFamily: "'Noto Serif SC', serif",
+                    fontSize: 48,
+                    fontWeight: 300,
+                    color: '#EDE5DC',
+                    lineHeight: 1,
+                    flexShrink: 0,
+                    width: 56,
                   }}
                 >
-                  {f.title}
-                </h3>
-                <p style={{ fontSize: 13, color: '#5C4D3E', lineHeight: 1.7 }}>{f.desc}</p>
-                {f.link && (
-                  <p style={{ fontSize: 12, color: '#E8A87C', marginTop: 10, fontWeight: 500 }}>了解更多 →</p>
-                )}
+                  {f.num}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ color: '#7A6B5D' }}>{f.icon}</span>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#3D3028', margin: 0 }}>{f.title}</h3>
+                  </div>
+                  <p style={{ fontSize: 16, color: '#5C4D3E', lineHeight: 1.8, margin: 0 }}>{f.desc}</p>
+                  {f.link && (
+                    <p style={{ fontSize: 13, color: '#E8A87C', marginTop: 8, fontWeight: 500, textAlign: 'right' }}>了解更多 →</p>
+                  )}
+                </div>
               </div>
             )
             return f.link
-              ? <Link key={f.title} href={f.link} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</Link>
-              : card
+              ? <Link key={f.title} href={f.link} style={{ textDecoration: 'none', color: 'inherit' }}>{row}</Link>
+              : row
           })}
         </div>
       </section>
 
       {/* ─── Safety Statement ─────────────────────── */}
-      <section
-        style={{
-          backgroundColor: '#EEF7F5',
-          borderTop: '1px solid #CCE9E3',
-          borderBottom: '1px solid #CCE9E3',
-          padding: '40px 24px',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ maxWidth: 620, margin: '0 auto' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
-          <h2
+      <section style={{ backgroundColor: '#F5E6D3', padding: '56px 24px' }}>
+        <div style={{ maxWidth: 580, margin: '0 auto', textAlign: 'center' }}>
+          <p
             style={{
-              fontSize: 18,
-              fontWeight: 600,
-              marginBottom: 12,
-              color: '#2C6B5E',
+              fontFamily: "'Noto Serif SC', serif",
+              fontSize: 20,
+              fontStyle: 'italic',
+              color: '#3D3028',
+              lineHeight: 1.8,
+              marginBottom: 20,
             }}
           >
-            你的隐私是我们的首要承诺
-          </h2>
-          <p style={{ fontSize: 14, color: '#4A9585', lineHeight: 1.8 }}>
-            小安不会收集你的个人身份信息。对话内容仅用于本次会话，不会在你的设备上长期保存。
-            如果你担心被人看到，可以随时点击右上角<strong>「快速离开」</strong>，
-            它会清除记录并立即跳转到其他页面，浏览器也不会留下返回记录。
+            你的隐私是我们的首要承诺。对话内容仅用于本次会话，不会长期保存。
+          </p>
+          <p style={{ fontSize: 14, color: '#5C4D3E', lineHeight: 1.8 }}>
+            如果你担心被人看到，可以随时点击右上角<strong>「快速离开」</strong>一键清除记录并跳转。浏览器不会留下返回记录。
           </p>
         </div>
       </section>
 
       {/* ─── FAQ ──────────────────────────────────── */}
-      <section style={{ maxWidth: 680, margin: '0 auto', padding: '60px 24px' }}>
+      <section style={{ maxWidth: 680, margin: '0 auto', padding: '72px 24px' }}>
         <h2
           style={{
-            fontSize: 20,
+            fontFamily: "'Noto Serif SC', serif",
+            fontSize: 22,
             fontWeight: 600,
-            textAlign: 'center',
-            marginBottom: 32,
+            marginBottom: 36,
             color: '#3D3028',
           }}
         >
           常见问题
         </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {faqs.map(faq => (
             <details
               key={faq.q}
-              style={{
-                backgroundColor: '#fff',
-                border: '1px solid #E6DDD5',
-                borderRadius: 12,
-                padding: '16px 20px',
-              }}
+              style={{ borderBottom: '1px solid #E6DDD5', padding: '20px 0' }}
             >
               <summary
                 style={{
                   cursor: 'pointer',
                   fontWeight: 600,
-                  fontSize: 14,
+                  fontSize: 16,
                   color: '#3D3028',
                   listStyle: 'none',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   gap: 8,
+                  minHeight: 44,
                 }}
               >
                 {faq.q}
-                <span style={{ color: '#E8A87C', flexShrink: 0 }}>▾</span>
+                <span className="faq-arrow" style={{ color: '#E8A87C', flexShrink: 0, fontSize: 14 }}>▸</span>
               </summary>
-              <p style={{ fontSize: 13, color: '#5C4D3E', marginTop: 12, lineHeight: 1.8 }}>
+              <p style={{ fontSize: 16, color: '#5C4D3E', marginTop: 12, lineHeight: 1.8 }}>
                 {faq.a}
               </p>
             </details>
@@ -310,81 +346,77 @@ const LandingPage: FC = () => {
       </section>
 
       {/* ─── Contact ──────────────────────────────── */}
-      <section style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
-          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#3D3028', marginBottom: 10 }}>
-            联系我们
-          </h2>
-          <p style={{ fontSize: 14, color: '#8F7E6E', lineHeight: 1.8, maxWidth: 480, margin: '0 auto' }}>
-            如有合作意向、问题反馈或需要进一步帮助，欢迎通过以下方式联系我们，或在下方直接留言。
-          </p>
-        </div>
-
-        {/* Contact info cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 16,
-          marginBottom: 40,
-        }}>
-          {[
-            { icon: '📱', label: '联系电话', value: '请联系机构负责人' },
-            { icon: '💬', label: '微信公众号', value: '请联系机构负责人' },
-            { icon: '✉️', label: '电子邮件', value: '请联系机构负责人' },
-          ].map(item => (
-            <div key={item.label} style={{
-              backgroundColor: '#fff',
-              border: '1px solid #E6DDD5',
-              borderRadius: 12,
-              padding: '20px 16px',
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>{item.icon}</div>
-              <div style={{ fontSize: 12, color: '#B5A898', marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#5C4D3E' }}>{item.value}</div>
+      <section style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px 72px' }}>
+        <hr style={{ border: 'none', borderTop: '1px solid #E6DDD5', marginBottom: 48 }} />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 40,
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                fontFamily: "'Noto Serif SC', serif",
+                fontSize: 22,
+                fontWeight: 600,
+                color: '#3D3028',
+                marginBottom: 12,
+              }}
+            >
+              联系我们
+            </h2>
+            <p style={{ fontSize: 16, color: '#5C4D3E', lineHeight: 1.8, marginBottom: 28 }}>
+              如有合作意向、问题反馈或需要进一步帮助，欢迎联系我们。
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                { icon: <IconPhone />, label: '联系电话', value: '请联系机构负责人' },
+                { icon: <IconWechat />, label: '微信公众号', value: '请联系机构负责人' },
+                { icon: <IconMail />, label: '电子邮件', value: '请联系机构负责人' },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ color: '#7A6B5D' }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#7A6B5D', marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#3D3028' }}>{item.value}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-
-        {/* Leave a message */}
-        <div style={{
-          backgroundColor: '#fff',
-          border: '1px solid #E6DDD5',
-          borderRadius: 16,
-          padding: '32px 28px',
-          boxShadow: '0 2px 12px rgba(74,66,56,0.06)',
-        }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#3D3028', marginBottom: 4 }}>
-            给我们留言
-          </h3>
-          <p style={{ fontSize: 12, color: '#B5A898', marginBottom: 20 }}>
-            留言将由团队查看，不会公开显示。
-          </p>
-          <ContactForm />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#3D3028', marginBottom: 4 }}>
+              给我们留言
+            </h3>
+            <p style={{ fontSize: 12, color: '#7A6B5D', marginBottom: 20 }}>
+              留言信息不会公开，仅供团队查看。
+            </p>
+            <ContactForm />
+          </div>
         </div>
       </section>
 
       {/* ─── Footer ───────────────────────────────── */}
       <footer
         style={{
-          borderTop: '1px solid #E6DDD5',
-          padding: '32px 24px',
+          backgroundColor: '#3D3028',
+          padding: '40px 24px',
           textAlign: 'center',
-          backgroundColor: '#F5E6D3',
         }}
       >
-        <p style={{ fontSize: 13, fontWeight: 700, color: '#3D3028', marginBottom: 8 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#FBF8F4', marginBottom: 12 }}>
           紧急求助热线
         </p>
-        <p style={{ fontSize: 14, color: '#5C4D3E', marginBottom: 16 }}>
+        <p style={{ fontSize: 16, color: '#FBF8F4', marginBottom: 20 }}>
           <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 700, marginRight: 24 }}>
             110 报警
           </a>
           <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 700, marginRight: 24 }}>
             12338 妇女热线
           </a>
-          <a href="tel:120" style={{ color: '#C8905A', fontWeight: 700 }}>
+          <a href="tel:120" style={{ color: '#D4A574', fontWeight: 700 }}>
             120 急救
           </a>
         </p>
