@@ -62,8 +62,8 @@ const IconMindBook = () => (
 const features = [
   {
     icon: <IconChat />,
-    title: '24 小时倾听，非批判陪伴',
-    desc: '无论几点，小安都在。没有指责，只有支持。用文字说出你的困境，你的感受是真实的，你的选择值得被尊重。',
+    title: '24 小时倾听',
+    desc: '无论几点，小安都在。没有指责，只有支持。你的感受是真实的，你的选择值得被尊重。',
     num: '01',
   },
   {
@@ -74,14 +74,14 @@ const features = [
   },
   {
     icon: <IconMapPin />,
-    title: '资源导航',
+    title: '线下支援导航',
     desc: '提供庇护所、法律援助、心理咨询等资源信息，帮你找到下一步。',
     link: '/resources',
     num: '03',
   },
   {
     icon: <IconMindBook />,
-    title: '心理资源支持库',
+    title: '资源支持库',
     desc: '整合家暴防治教育资源：心理疗愈书籍、专业文章、支持性网站，帮助你了解、理解、走出困境。',
     link: '/psych-resources',
     num: '04',
@@ -132,6 +132,23 @@ summary::marker { display: none; }
 a:focus-visible, button:focus-visible, summary:focus-visible {
   outline: 2px solid #E8A87C; outline-offset: 2px;
 }
+/* Hero two-column layout */
+.hero-demo { display: none; }
+@media (min-width: 1024px) {
+  .hero-inner { display: flex; align-items: flex-start; gap: 64px; max-width: 1200px !important; }
+  .hero-content { flex: 1; }
+  .hero-demo { display: flex; flex-direction: column; width: 360px; flex-shrink: 0; }
+}
+/* Demo chat bubble animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.demo-msg { animation: fadeInUp 0.5s ease both; }
+.demo-msg:nth-child(1) { animation-delay: 0.2s; }
+.demo-msg:nth-child(2) { animation-delay: 0.7s; }
+.demo-msg:nth-child(3) { animation-delay: 1.3s; }
+.demo-msg:nth-child(4) { animation-delay: 1.9s; }
 `
 
 const LandingPage: FC = () => {
@@ -171,86 +188,143 @@ const LandingPage: FC = () => {
             zIndex: 1,
           }}
         />
-        <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative', zIndex: 2 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              border: '1px solid #E8A87C',
-              borderRadius: 4,
-              padding: '6px 14px',
-              marginBottom: 32,
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#E8A87C', display: 'inline-block' }} />
-            <span style={{ fontSize: 12, color: '#5C4D3E', letterSpacing: '0.06em' }}>反家庭暴力 AI 助手</span>
-          </div>
-
-          <h1
-            style={{
-              fontFamily: "'Noto Serif SC', serif",
-              fontSize: 'clamp(3rem, 8vw, 5rem)',
-              fontWeight: 700,
-              color: '#3D3028',
-              marginBottom: 24,
-              lineHeight: 1.1,
-            }}
-          >
-            小安
-          </h1>
-
-          <div style={{ borderLeft: '3px solid #E8A87C', paddingLeft: 16, marginBottom: 12 }}>
-            <p
+        <div className="hero-inner" style={{ maxWidth: 640, margin: '0 auto', position: 'relative', zIndex: 2 }}>
+          <div className="hero-content">
+            <div
               style={{
-                fontSize: 18,
-                color: '#5C4D3E',
-                fontWeight: 400,
-                lineHeight: 1.6,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                border: '1px solid #E8A87C',
+                borderRadius: 4,
+                padding: '6px 14px',
+                marginBottom: 32,
               }}
             >
-              你不是一个人，小安在这里陪你。
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#E8A87C', display: 'inline-block' }} />
+              <span style={{ fontSize: 12, color: '#5C4D3E', letterSpacing: '0.06em' }}>反家庭暴力 AI 助手</span>
+            </div>
+
+            <h1
+              style={{
+                fontFamily: "'Noto Serif SC', serif",
+                fontSize: 'clamp(3rem, 8vw, 5rem)',
+                fontWeight: 700,
+                color: '#3D3028',
+                marginBottom: 24,
+                lineHeight: 1.1,
+              }}
+            >
+              小安
+            </h1>
+
+            <div style={{ borderLeft: '3px solid #E8A87C', paddingLeft: 16, marginBottom: 12 }}>
+              <p
+                style={{
+                  fontSize: 18,
+                  color: '#5C4D3E',
+                  fontWeight: 400,
+                  lineHeight: 1.6,
+                }}
+              >
+                你不是一个人，小安在这里陪你。
+              </p>
+            </div>
+
+            <p style={{ fontSize: 14, color: '#7A6B5D', marginBottom: 40 }}>
+              安全 · 保密 · 随时在线
             </p>
-          </div>
 
-          <p style={{ fontSize: 14, color: '#7A6B5D', marginBottom: 40 }}>
-            安全 · 保密 · 随时在线
-          </p>
-
-          <Link
-            href="/chat"
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#E8A87C',
-              color: '#fff',
-              borderRadius: 4,
-              padding: '14px 36px',
-              fontSize: 16,
-              fontWeight: 700,
-              textDecoration: 'none',
-              transition: 'opacity 200ms ease-out',
-              minHeight: 48,
-            }}
-          >
-            开始倾诉 →
-          </Link>
-
-          <div style={{ marginTop: 20 }}>
-            <Link href="/stories" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 24 }}>
-              受害者故事
+            <Link
+              href="/chat"
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#E8A87C',
+                color: '#fff',
+                borderRadius: 4,
+                padding: '14px 36px',
+                fontSize: 16,
+                fontWeight: 700,
+                textDecoration: 'none',
+                transition: 'opacity 200ms ease-out',
+                minHeight: 48,
+              }}
+            >
+              开始倾诉 →
             </Link>
-            <Link href="/docs-toolkit" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-              文档工具库
-            </Link>
-          </div>
 
-          <p style={{ fontSize: 13, color: '#7A6B5D', marginTop: 24 }}>
-            紧急情况请拨&nbsp;
-            <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 600 }}>110</a>
-            &nbsp;或&nbsp;
-            <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 600 }}>12338（妇女热线）</a>
-          </p>
-        </div>
+            <div style={{ marginTop: 20 }}>
+              <Link href="/stories" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 24 }}>
+                受害者故事
+              </Link>
+              <Link href="/docs-toolkit" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                文档工具库
+              </Link>
+            </div>
+
+            <p style={{ fontSize: 13, color: '#7A6B5D', marginTop: 24 }}>
+              紧急情况请拨&nbsp;
+              <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 600 }}>110</a>
+              &nbsp;或&nbsp;
+              <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 600 }}>12338（妇女热线）</a>
+            </p>
+          </div>{/* end hero-content */}
+
+          {/* Mock chat demo — desktop only via CSS */}
+          <div className="hero-demo" aria-hidden="true">
+            <div style={{
+              background: '#fff',
+              borderRadius: 16,
+              boxShadow: '0 8px 40px rgba(61,48,40,0.10)',
+              overflow: 'hidden',
+              border: '1px solid #EDE5DC',
+              marginTop: 8,
+            }}>
+              {/* window chrome */}
+              <div style={{ background: '#F5E6D3', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #EDE5DC' }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDAA80', display: 'inline-block' }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDE5DC', display: 'inline-block' }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDE5DC', display: 'inline-block' }} />
+                <span style={{ fontSize: 11, color: '#9E8E7E', marginLeft: 8, fontFamily: "'Noto Sans SC', sans-serif" }}>与小安对话</span>
+              </div>
+              {/* messages */}
+              <div style={{ padding: '18px 14px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 260 }}>
+                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🤍</div>
+                  <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
+                    你好，我是小安。不论发生什么，我都在这里，没有评判，只有陪伴。
+                  </div>
+                </div>
+                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8A87C', flexShrink: 0 }} />
+                  <div style={{ background: '#E8A87C', borderRadius: '12px 0 12px 12px', padding: '8px 12px', fontSize: 13, color: '#fff', lineHeight: 1.6, maxWidth: 200, fontFamily: "'Noto Sans SC', sans-serif" }}>
+                    我不知道该怎么办，很害怕…
+                  </div>
+                </div>
+                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🤍</div>
+                  <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
+                    我听到你了。你的感受很真实。能告诉我，现在你安全吗？
+                  </div>
+                </div>
+                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8A87C', flexShrink: 0 }} />
+                  <div style={{ background: '#E8A87C', borderRadius: '12px 0 12px 12px', padding: '8px 12px', fontSize: 13, color: '#fff', lineHeight: 1.6, maxWidth: 200, fontFamily: "'Noto Sans SC', sans-serif" }}>
+                    现在还好，但我需要有人听我说说…
+                  </div>
+                </div>
+              </div>
+              {/* fake input */}
+              <div style={{ padding: '10px 14px', borderTop: '1px solid #EDE5DC', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ flex: 1, background: '#F9F5F1', borderRadius: 8, padding: '7px 12px', fontSize: 12, color: '#B5A898', fontFamily: "'Noto Sans SC', sans-serif" }}>和小安说说心里话…</div>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#E8A87C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                </div>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: '#9E8E7E', textAlign: 'center', marginTop: 10, fontFamily: "'Noto Sans SC', sans-serif" }}>以上为演示对话，非真实数据</p>
+          </div>{/* end hero-demo */}
+        </div>{/* end hero-inner */}
       </section>
 
       {/* ─── Features (Editorial Rows) ────────────── */}
@@ -258,7 +332,7 @@ const LandingPage: FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
             gap: 0,
           }}
         >

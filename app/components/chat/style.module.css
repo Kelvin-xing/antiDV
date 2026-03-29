@@ -1,8 +1,10 @@
 .answerIcon {
   position: relative;
   background: url(./icons/sister.svg);
-  background-size: cover;
+  background-size: 160%;
+  background-position: 48% 22%;
   border-radius: 50%;
+  background-color: #F5E6D3;
 }
 
 .typeingIcon {

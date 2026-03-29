@@ -66,6 +66,7 @@ const Main: FC<IMainProps> = () => {
   const [isShowSidebar, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
   const [isShowResourcePanel, { setTrue: showResourcePanel, setFalse: hideResourcePanel }] = useBoolean(false)
   const [isPanelCollapsed, { toggle: togglePanelCollapse }] = useBoolean(false)
+  const [isSidebarCollapsed, { toggle: toggleSidebarCollapse }] = useBoolean(false)
   const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
     enabled: false,
     number_limits: 2,
@@ -747,6 +748,8 @@ const Main: FC<IMainProps> = () => {
         copyRight={APP_INFO.copyright || APP_INFO.title}
         onDeleteConversation={handleDeleteConversation}
         onClearAll={handleClearAll}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
     )
   }
@@ -755,11 +758,11 @@ const Main: FC<IMainProps> = () => {
 
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
-  // Compute input bar margin based on panel state (desktop only)
-  // sidebar ~244px, panel 300px open / 48px collapsed / 0px mobile
-  const inputMarginLeft = isDesktop && hasSetInputs
-    ? isPanelCollapsed ? 98 : -28
-    : 122
+  // Compute input bar edges to fit between sidebar and resource panel
+  const panelWidth = isDesktop && hasSetInputs ? (isPanelCollapsed ? 48 : 300) : 0
+  const sidebarWidth = !isMobile ? (isSidebarCollapsed ? 48 : 244) : 0
+  const inputLeft = sidebarWidth
+  const inputRight = panelWidth
 
   return (
     <div className='bg-gray-100'>
@@ -811,7 +814,8 @@ const Main: FC<IMainProps> = () => {
                     fileConfig={fileConfig}
                     onDeleteMessage={handleDeleteMessage}
                     onReview={handleReview}
-                    inputMarginLeft={inputMarginLeft}
+                    inputLeft={inputLeft}
+                    inputRight={inputRight}
                   />
                   {/* Export button */}
                   {chatList.filter(i => !i.isOpeningStatement).length > 0 && (

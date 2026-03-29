@@ -184,31 +184,30 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
     if (!isMobileOverlay && isCollapsed) {
         return (
             <div style={panelStyle}>
-                <button
-                    onClick={onToggleCollapse}
-                    aria-label="展开资源面板"
-                    title="展开"
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: 32,
-                        height: 48,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#B5A898',
-                        borderRadius: 4,
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                </button>
+                {/* Header row — mirrors the expanded header position */}
+                <div style={{ padding: '20px 0 16px', borderBottom: '1px solid #E6DDD5', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                    <button
+                        onClick={onToggleCollapse}
+                        aria-label="展开资源面板"
+                        title="展开"
+                        style={{
+                            width: 24,
+                            height: 24,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#B5A898',
+                            borderRadius: 4,
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         )
     }
@@ -249,7 +248,7 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
                         backgroundImage: 'url(https://images.pexels.com/photos/4498238/pexels-photo-4498238.jpeg?auto=compress&cs=tinysrgb&w=400)',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        opacity: 0.05,
+                        opacity: 0.12,
                         pointerEvents: 'none',
                     }}
                 />
@@ -326,15 +325,18 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
                     <p style={{ fontSize: 12, color: '#7A6B5D', margin: 0, lineHeight: 1.4 }}>
                         {hasMatches
                             ? '根据对话内容为你推荐相关资源'
-                            : '随时点击探索以下资源'}
+                            : accumulatedAIText.trim() === ''
+                                ? '开始对话后，我会为你推荐相关资源'
+                                : '随时点击探索以下资源'}
                     </p>
                 </div>
 
                 {/* Resource List */}
                 <div style={{ padding: '12px 0', position: 'relative', zIndex: 1, flex: 1 }}>
-                    {!hasMatches && accumulatedAIText.trim() === '' && (
-                        <div style={{ padding: '32px 20px', textAlign: 'center', color: '#B5A898', fontSize: 12, lineHeight: 1.7 }}>
-                            开始倾诉，我会根据对话<br />为你推荐相关资源
+                    {accumulatedAIText.trim() === '' && (
+                        <div style={{ padding: '48px 20px', textAlign: 'center', color: '#C4B4A4', fontSize: 13, lineHeight: 2 }}>
+                            <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.5 }}>💬</div>
+                            开始倾诉<br />资源将根据对话自动推荐
                         </div>
                     )}
                     {orderedResources.map((resource, idx) => {

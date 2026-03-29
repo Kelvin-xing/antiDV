@@ -33,7 +33,8 @@ export interface IChatProps {
   fileConfig?: FileUpload
   onDeleteMessage?: (id: string) => void
   onReview?: (messageId: string, review: { score: number; comment: string }) => void
-  inputMarginLeft?: number
+  inputLeft?: number
+  inputRight?: number
 }
 
 const Chat: FC<IChatProps> = ({
@@ -50,7 +51,8 @@ const Chat: FC<IChatProps> = ({
   fileConfig,
   onDeleteMessage,
   onReview,
-  inputMarginLeft,
+  inputLeft,
+  inputRight,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -174,8 +176,8 @@ const Chat: FC<IChatProps> = ({
       {
         !isHideSendInput && (
           <div
-            className='fixed z-10 bottom-4 left-1/2 transform -translate-x-1/2 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'
-            style={inputMarginLeft !== undefined ? { marginLeft: inputMarginLeft } : undefined}
+            className='fixed z-10 bottom-4 px-3.5'
+            style={{ left: inputLeft ?? 0, right: inputRight ?? 0 }}
           >
             <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
               {

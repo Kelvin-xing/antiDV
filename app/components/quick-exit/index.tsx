@@ -1,20 +1,17 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-// 快速離開：點擊或按 ESC 即跳離頁面，不留瀏覽記錄
 const ESCAPE_URL = 'https://www.weather.com.cn/'
 const USER_HASH_KEY = 'xiaoAn_user_hash'
 
 export function quickEscape() {
   try {
-    // Preserve identity hash so user can still recover their history later
     const savedHash = localStorage.getItem(USER_HASH_KEY)
     sessionStorage.clear()
     localStorage.clear()
     if (savedHash) localStorage.setItem(USER_HASH_KEY, savedHash)
   }
   catch { }
-  // Pad history stack so browser back button skips past this page
   try {
     for (let i = 0; i < 5; i++)
       window.history.pushState(null, '', window.location.href)
@@ -24,46 +21,117 @@ export function quickEscape() {
 }
 
 export default function QuickExit() {
+  // null = use default CSS position (top-right); once dragged, track in px
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const dragRef = useRef<{
+    startX: number
+    startY: number
+    btnX: number
+    btnY: number
+    moved: boolean
+  } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { quickEscape() }
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') quickEscape() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const startDrag = (clientX: number, clientY: number) => {
+    const btn = btnRef.current
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    dragRef.current = { startX: clientX, startY: clientY, btnX: rect.left, btnY: rect.top, moved: false }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    startDrag(e.clientX, e.clientY)
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      const dx = ev.clientX - dragRef.current.startX
+      const dy = ev.clientY - dragRef.current.startY
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true
+      if (dragRef.current.moved) {
+        const x = Math.max(0, Math.min(window.innerWidth - 120, dragRef.current.btnX + dx))
+        const y = Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.btnY + dy))
+        setPos({ x, y })
+      }
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    startDrag(t.clientX, t.clientY)
+    const onMove = (ev: TouchEvent) => {
+      if (!dragRef.current) return
+      const touch = ev.touches[0]
+      const dx = touch.clientX - dragRef.current.startX
+      const dy = touch.clientY - dragRef.current.startY
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true
+      if (dragRef.current.moved) {
+        ev.preventDefault()
+        const x = Math.max(0, Math.min(window.innerWidth - 120, dragRef.current.btnX + dx))
+        const y = Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.btnY + dy))
+        setPos({ x, y })
+      }
+    }
+    const onEnd = () => {
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onEnd)
+    }
+    document.addEventListener('touchmove', onMove, { passive: false })
+    document.addEventListener('touchend', onEnd)
+  }
+
+  const handleClick = () => {
+    if (dragRef.current?.moved) return
+    quickEscape()
+  }
+
+  const posStyle = pos
+    ? { left: pos.x, top: pos.y, right: 'auto' as const, bottom: 'auto' as const }
+    : { top: 12, right: 12 }
+
   return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .quick-exit-btn { position: fixed; top: 12px; right: 12px; z-index: 9999; }
-          @media (max-width: 640px) { .quick-exit-btn { right: auto !important; left: 12px !important; } }
-        `,
-      }} />
-      <button
-        className="quick-exit-btn"
-        onClick={quickEscape}
-        aria-label="快速离开此页面"
-        title="快速离开（或按 ESC）"
-        style={{
-          backgroundColor: '#E8A87C',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '20px',
-          padding: '6px 14px',
-          fontSize: '13px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-          letterSpacing: '0.03em',
-          transition: 'background-color 0.15s',
-          fontFamily: '\'Noto Sans SC\', sans-serif',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D98B5A')}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E8A87C')}
-      >
-        快速离开 ✕
-      </button>
-    </>
+    <button
+      ref={btnRef}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      onClick={handleClick}
+      aria-label="快速离开此页面"
+      title="快速离开（可拖动，或按 ESC）"
+      style={{
+        position: 'fixed',
+        zIndex: 9999,
+        cursor: 'grab',
+        backgroundColor: '#E8A87C',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '20px',
+        padding: '6px 14px',
+        fontSize: '13px',
+        fontWeight: 700,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        letterSpacing: '0.03em',
+        transition: 'background-color 0.15s',
+        fontFamily: "'Noto Sans SC', sans-serif",
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'none',
+        ...posStyle,
+      }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D98B5A')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E8A87C')}
+    >
+      快速离开 ✕
+    </button>
   )
 }
