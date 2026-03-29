@@ -27,6 +27,18 @@ const features = [
     title: '非批判陪伴',
     desc: '这里没有指责，只有支持。你的感受是真实的，你的选择值得被尊重。',
   },
+  {
+    icon: '📖',
+    title: '受害者故事',
+    desc: '阅读走出困境的真实故事，你并不孤单，她们也曾和你一样。',
+    link: '/stories',
+  },
+  {
+    icon: '📄',
+    title: '文档工具库',
+    desc: '人身保护令、告诫书等法律文书模板，填写即可生成下载。',
+    link: '/docs-toolkit',
+  },
 ]
 
 const faqs = [
@@ -111,6 +123,42 @@ const LandingPage: FC = () => {
           >
             开始倾诉 →
           </Link>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+            <Link
+              href="/stories"
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#fff',
+                color: '#E8A87C',
+                borderRadius: 28,
+                padding: '10px 28px',
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: 'none',
+                border: '1.5px solid #E8A87C',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              📖 受害者故事
+            </Link>
+            <Link
+              href="/docs-toolkit"
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#fff',
+                color: '#E8A87C',
+                borderRadius: 28,
+                padding: '10px 28px',
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: 'none',
+                border: '1.5px solid #E8A87C',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              📄 文档工具库
+            </Link>
+          </div>
           <p style={{ fontSize: 12, color: '#B5A898', marginTop: 16 }}>
             紧急情况请立拨&nbsp;
             <a href={`tel:${EMERGENCY_HOTLINE}`} style={{ color: '#E8A87C', fontWeight: 700 }}>
@@ -144,31 +192,41 @@ const LandingPage: FC = () => {
             gap: 20,
           }}
         >
-          {features.map(f => (
-            <div
-              key={f.title}
-              style={{
-                backgroundColor: '#fff',
-                border: '1px solid #E6DDD5',
-                borderRadius: 16,
-                padding: '24px 20px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
-              <h3
+          {features.map(f => {
+            const card = (
+              <div
+                key={f.title}
                 style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  marginBottom: 8,
-                  color: '#3D3028',
+                  backgroundColor: '#fff',
+                  border: '1px solid #E6DDD5',
+                  borderRadius: 16,
+                  padding: '24px 20px',
+                  textAlign: 'center',
+                  transition: f.link ? 'box-shadow 0.2s, transform 0.2s' : undefined,
+                  cursor: f.link ? 'pointer' : undefined,
                 }}
               >
-                {f.title}
-              </h3>
-              <p style={{ fontSize: 13, color: '#5C4D3E', lineHeight: 1.7 }}>{f.desc}</p>
-            </div>
-          ))}
+                <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
+                <h3
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    color: '#3D3028',
+                  }}
+                >
+                  {f.title}
+                </h3>
+                <p style={{ fontSize: 13, color: '#5C4D3E', lineHeight: 1.7 }}>{f.desc}</p>
+                {f.link && (
+                  <p style={{ fontSize: 12, color: '#E8A87C', marginTop: 10, fontWeight: 500 }}>了解更多 →</p>
+                )}
+              </div>
+            )
+            return f.link
+              ? <Link key={f.title} href={f.link} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</Link>
+              : card
+          })}
         </div>
       </section>
 
