@@ -21,6 +21,7 @@ const features = [
     icon: '📋',
     title: '资源导航',
     desc: '提供庇护所、法律援助、心理咨询等资源信息，帮你找到下一步。',
+    link: '/resources',
   },
   {
     icon: '❤️',
