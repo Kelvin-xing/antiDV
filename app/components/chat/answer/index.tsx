@@ -4,8 +4,9 @@ import type { FeedbackFunc } from '../type'
 import type { ChatItem, MessageRating, VisionFile } from '@/types/app'
 import type { Emoji } from '@/types/tools'
 import { HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ReviewModal from './review-modal'
 import Button from '@/app/components/base/button'
 import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
 import Tooltip from '@/app/components/base/tooltip'
@@ -71,6 +72,7 @@ interface IAnswerProps {
   allToolIcons?: Record<string, string | Emoji>
   suggestionClick?: (suggestion: string) => void
   onDelete?: () => void
+  onReview?: (messageId: string, review: { score: number; comment: string }) => void
 }
 
 // The component needs to maintain its own state to control whether to display input component
@@ -82,8 +84,10 @@ const Answer: FC<IAnswerProps> = ({
   allToolIcons,
   suggestionClick = () => { },
   onDelete,
+  onReview,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
+  const [showReviewModal, setShowReviewModal] = useState(false)
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
 
   const { t } = useTranslation()
@@ -141,9 +145,28 @@ const Answer: FC<IAnswerProps> = ({
         )
     }
 
+    const reviewOperation = () => {
+      if (isResponding) return null
+      return (
+        <Tooltip selector={`review-${randomString(16)}`} content={item.userReview ? '修改评价' : '评价此回复'}>
+          {OperationBtn({
+            innerContent: (
+              <IconWrapper>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill={item.userReview ? '#FBBF24' : 'none'} stroke={item.userReview ? '#FBBF24' : 'currentColor'} strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+              </IconWrapper>
+            ),
+            onClick: () => setShowReviewModal(true),
+          })}
+        </Tooltip>
+      )
+    }
+
     return (
       <div className={`${s.itemOperation} flex gap-2`}>
         {userOperation()}
+        {reviewOperation()}
       </div>
     )
   }
@@ -180,6 +203,14 @@ const Answer: FC<IAnswerProps> = ({
 
   return (
     <div key={id}>
+      {showReviewModal && (
+        <ReviewModal
+          messageId={id}
+          existingReview={item.userReview}
+          onSubmit={(msgId, review) => onReview?.(msgId, review)}
+          onClose={() => setShowReviewModal(false)}
+        />
+      )}
       <div className="flex items-start">
         <div className={`${s.answerIcon} w-10 h-10 shrink-0`}>
           {isResponding
@@ -215,6 +246,20 @@ const Answer: FC<IAnswerProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {item.userReview && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 border-t border-gray-200 pt-2">
+                  <span className="flex shrink-0">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <svg key={i} className={`w-3.5 h-3.5 ${i < item.userReview!.score ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                      </svg>
+                    ))}
+                  </span>
+                  {item.userReview.comment && (
+                    <span className="truncate max-w-[200px]">{item.userReview.comment}</span>
+                  )}
                 </div>
               )}
             </div>

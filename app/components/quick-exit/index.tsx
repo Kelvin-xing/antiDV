@@ -28,8 +28,8 @@ export default function QuickExit() {
   return (
     <button
       onClick={quickEscape}
-      aria-label="快速離開此頁面"
-      title="快速離開（或按 ESC）"
+      aria-label="快速离开此页面"
+      title="快速离开（或按 ESC）"
       style={{
         position: 'fixed',
         top: '12px',
@@ -51,7 +51,7 @@ export default function QuickExit() {
       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D98B5A')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E8A87C')}
     >
-      快速離開 ✕
+      快速离开 ✕
     </button>
   )
 }

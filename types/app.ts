@@ -90,13 +90,19 @@ export interface IChatItem {
   message_files?: VisionFile[]
 }
 
+export interface UserReview {
+  score: number // 1-5
+  comment: string
+}
+
 export type ChatItem = IChatItem & {
   isError?: boolean
   workflow_run_id?: string
   workflowProcess?: WorkflowProcess
+  userReview?: UserReview
 }
 
-export interface ResponseHolder {}
+export interface ResponseHolder { }
 
 export interface ConversationItem {
   id: string

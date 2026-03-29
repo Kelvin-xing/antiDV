@@ -32,6 +32,7 @@ export interface IChatProps {
   visionConfig?: VisionSettings
   fileConfig?: FileUpload
   onDeleteMessage?: (id: string) => void
+  onReview?: (messageId: string, review: { score: number; comment: string }) => void
 }
 
 const Chat: FC<IChatProps> = ({
@@ -47,6 +48,7 @@ const Chat: FC<IChatProps> = ({
   visionConfig,
   fileConfig,
   onDeleteMessage,
+  onReview,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -152,6 +154,7 @@ const Chat: FC<IChatProps> = ({
               isResponding={isResponding && isLast}
               suggestionClick={suggestionClick}
               onDelete={onDeleteMessage ? () => onDeleteMessage(item.id) : undefined}
+              onReview={onReview}
             />
           }
           return (

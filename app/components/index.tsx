@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
+import * as XLSX from 'xlsx'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
@@ -659,6 +660,48 @@ const Main: FC<IMainProps> = () => {
     }))
   }
 
+  const handleReview = (messageId: string, review: { score: number; comment: string }) => {
+    setChatList(produce(getChatList(), (draft) => {
+      const item = draft.find(i => i.id === messageId)
+      if (item) { item.userReview = review }
+    }))
+    notify({ type: 'success', message: '评价已保存' })
+  }
+
+  const handleExport = () => {
+    const list = getChatList()
+    const rows: Record<string, string | number>[] = []
+    let seq = 1
+    list.forEach((item) => {
+      if (item.isOpeningStatement) return
+      const role = item.isAnswer ? 'AI' : '用户'
+      const workflowSteps = item.workflowProcess?.tracing
+        ?.map((t: any) => `${t.title ?? t.node_type}`)
+        .join(' → ') ?? ''
+      const score = (!item.isAnswer || !item.userReview) ? '' : item.userReview.score
+      const comment = (!item.isAnswer || !item.userReview) ? '' : (item.userReview.comment || '')
+      rows.push({
+        '序号': seq++,
+        '角色': role,
+        '内容': item.content,
+        'Workflow节点': workflowSteps,
+        '用户评分': score,
+        '用户评论': comment,
+      })
+    })
+    if (rows.length === 0) {
+      notify({ type: 'info', message: '当前对话没有内容可导出' })
+      return
+    }
+    const ws = XLSX.utils.json_to_sheet(rows)
+    // Column widths
+    ws['!cols'] = [{ wch: 6 }, { wch: 6 }, { wch: 60 }, { wch: 30 }, { wch: 8 }, { wch: 40 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '聊天记录')
+    const filename = `聊天记录_${conversationName}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    XLSX.writeFile(wb, filename)
+  }
+
   const handleDeleteConversation = async (id: string) => {
     try {
       await deleteConversation(id)
@@ -743,7 +786,24 @@ const Main: FC<IMainProps> = () => {
                   visionConfig={visionConfig}
                   fileConfig={fileConfig}
                   onDeleteMessage={handleDeleteMessage}
+                  onReview={handleReview}
                 />
+                {/* Export button */}
+                {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
+                  <div className="flex justify-end px-2 pt-1 pb-2">
+                    <button
+                      onClick={handleExport}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      导出聊天记录 (.xlsx)
+                    </button>
+                  </div>
+                )}
               </div>)
           }
         </div>
