@@ -2,6 +2,7 @@ import type { FC } from 'react'
 import React from 'react'
 import Link from 'next/link'
 import ContactForm from '@/app/components/contact-form'
+import ScrollReveal from '@/app/components/scroll-reveal'
 
 /* ── Inline SVG Icons (stroke 1.5, 20×20, no external deps) ── */
 const IconChat = () => (
@@ -156,7 +157,7 @@ const LandingPage: FC = () => {
             backgroundImage: 'url(https://images.pexels.com/photos/574312/pexels-photo-574312.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1)',
             backgroundSize: 'cover',
             backgroundPosition: 'center 40%',
-            opacity: 0.10,
+            opacity: 0.22,
             zIndex: 0,
           }}
         />
@@ -166,7 +167,7 @@ const LandingPage: FC = () => {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(135deg, rgba(251,248,244,0.92) 0%, rgba(245,230,211,0.75) 60%, rgba(251,248,244,0.88) 100%)',
+            background: 'linear-gradient(135deg, rgba(251,248,244,0.78) 0%, rgba(245,230,211,0.55) 60%, rgba(251,248,244,0.72) 100%)',
             zIndex: 1,
           }}
         />
@@ -261,7 +262,7 @@ const LandingPage: FC = () => {
             gap: 0,
           }}
         >
-          {features.map(f => {
+          {features.map((f, i) => {
             const row = (
               <div
                 key={f.title}
@@ -300,8 +301,8 @@ const LandingPage: FC = () => {
               </div>
             )
             return f.link
-              ? <Link key={f.title} href={f.link} style={{ textDecoration: 'none', color: 'inherit' }}>{row}</Link>
-              : row
+              ? <ScrollReveal key={f.title} delay={`${i * 60}ms`}><Link href={f.link} style={{ textDecoration: 'none', color: 'inherit' }}>{row}</Link></ScrollReveal>
+              : <ScrollReveal key={f.title} delay={`${i * 60}ms`}>{row}</ScrollReveal>
           })}
         </div>
       </section>
@@ -341,32 +342,34 @@ const LandingPage: FC = () => {
           常见问题
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {faqs.map(faq => (
-            <details
-              key={faq.q}
-              style={{ borderBottom: '1px solid #E6DDD5', padding: '20px 0' }}
-            >
-              <summary
-                style={{
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  color: '#3D3028',
-                  listStyle: 'none',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 8,
-                  minHeight: 44,
-                }}
+          {faqs.map((faq, i) => (
+            <ScrollReveal key={faq.q} delay={`${i * 50}ms`}>
+              <details
+                key={faq.q}
+                style={{ borderBottom: '1px solid #E6DDD5', padding: '20px 0' }}
               >
-                {faq.q}
-                <span className="faq-arrow" style={{ color: '#E8A87C', flexShrink: 0, fontSize: 14 }}>▸</span>
-              </summary>
-              <p style={{ fontSize: 16, color: '#5C4D3E', marginTop: 12, lineHeight: 1.8 }}>
-                {faq.a}
-              </p>
-            </details>
+                <summary
+                  style={{
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 16,
+                    color: '#3D3028',
+                    listStyle: 'none',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 8,
+                    minHeight: 44,
+                  }}
+                >
+                  {faq.q}
+                  <span className="faq-arrow" style={{ color: '#E8A87C', flexShrink: 0, fontSize: 14 }}>▸</span>
+                </summary>
+                <p style={{ fontSize: 16, color: '#5C4D3E', marginTop: 12, lineHeight: 1.8 }}>
+                  {faq.a}
+                </p>
+              </details>
+            </ScrollReveal>
           ))}
         </div>
       </section>

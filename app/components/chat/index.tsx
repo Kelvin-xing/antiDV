@@ -33,6 +33,7 @@ export interface IChatProps {
   fileConfig?: FileUpload
   onDeleteMessage?: (id: string) => void
   onReview?: (messageId: string, review: { score: number; comment: string }) => void
+  inputMarginLeft?: number
 }
 
 const Chat: FC<IChatProps> = ({
@@ -49,6 +50,7 @@ const Chat: FC<IChatProps> = ({
   fileConfig,
   onDeleteMessage,
   onReview,
+  inputMarginLeft,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -171,7 +173,10 @@ const Chat: FC<IChatProps> = ({
       </div>
       {
         !isHideSendInput && (
-          <div className='fixed z-10 bottom-4 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
+          <div
+            className='fixed z-10 bottom-4 left-1/2 transform -translate-x-1/2 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'
+            style={inputMarginLeft !== undefined ? { marginLeft: inputMarginLeft } : undefined}
+          >
             <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
               {
                 visionConfig?.enabled && (
@@ -229,7 +234,12 @@ const Chat: FC<IChatProps> = ({
                     </div>
                   }
                 >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
+                  <div
+                    className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`}
+                    style={{ touchAction: 'manipulation' }}
+                    onClick={handleSend}
+                    onPointerDown={(e) => { e.preventDefault(); handleSend() }}
+                  ></div>
                 </Tooltip>
               </div>
             </div>

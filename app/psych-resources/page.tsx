@@ -8,6 +8,25 @@ const focusStyle = `
 }
 a:focus-visible { outline: 2px solid #E8A87C; outline-offset: 2px; }
 .resource-card:hover { background-color: #F5EDE6 !important; }
+.resources-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #E6DDD5 transparent;
+  padding-bottom: 8px;
+}
+.resources-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.resources-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.resources-scroll::-webkit-scrollbar-thumb {
+  background-color: #E6DDD5;
+  border-radius: 2px;
+}
 `
 
 const typeLabel: Record<string, string> = {
@@ -159,14 +178,17 @@ const PsychResourcesPage: FC = () => {
                             <div style={{ height: 1, backgroundColor: '#E6DDD5' }} />
                         </div>
 
-                        {/* Resource grid */}
+                        {/* Resource grid / scroll row */}
                         <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                gap: 0,
-                                marginTop: 4,
-                            }}
+                            className={cat.resources.length > 3 ? 'resources-scroll' : undefined}
+                            style={cat.resources.length > 3
+                                ? { marginTop: 4 }
+                                : {
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                    gap: 0,
+                                    marginTop: 4,
+                                }}
                         >
                             {cat.resources.map(res => (
                                 <article
@@ -178,6 +200,11 @@ const PsychResourcesPage: FC = () => {
                                         padding: '20px 16px 20px 20px',
                                         backgroundColor: 'transparent',
                                         transition: 'background-color 150ms',
+                                        ...(cat.resources.length > 3 ? {
+                                            flexShrink: 0,
+                                            width: 280,
+                                            borderRight: '1px solid #E6DDD5',
+                                        } : {}),
                                     }}
                                 >
                                     {/* Type badge */}

@@ -50,7 +50,7 @@ const UserHashPanel: FC<UserHashPanelProps> = ({ onClose }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
             <div
                 className="relative w-full max-w-md rounded-2xl p-6 shadow-xl"
-                style={{ backgroundColor: '#FBF8F4', border: '1px solid #E6DDD5' }}
+                style={{ backgroundColor: '#FBF8F4', border: '1px solid #E6DDD5', overflowY: 'auto', maxHeight: 'calc(100dvh - 48px)' }}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">

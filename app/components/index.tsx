@@ -21,6 +21,8 @@ import Loading from '@/app/components/base/loading'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
 import AppUnavailable from '@/app/components/app-unavailable'
 import ResourcePanel from '@/app/components/resource-panel'
+import BackExitGuard from '@/app/components/back-exit-guard'
+import IncognitoNotice from '@/app/components/incognito-notice'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
@@ -63,6 +65,7 @@ const Main: FC<IMainProps> = () => {
   // in mobile, show sidebar by click button
   const [isShowSidebar, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
   const [isShowResourcePanel, { setTrue: showResourcePanel, setFalse: hideResourcePanel }] = useBoolean(false)
+  const [isPanelCollapsed, { toggle: togglePanelCollapse }] = useBoolean(false)
   const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
     enabled: false,
     number_limits: 2,
@@ -727,10 +730,11 @@ const Main: FC<IMainProps> = () => {
     setCurrConversationId('-1', APP_ID)
   }
 
-  const latestAIMessage = useMemo(() => {
-    const reversed = [...chatList].reverse()
-    const found = reversed.find(i => i.isAnswer && !i.isOpeningStatement)
-    return found?.content ?? ''
+  const accumulatedAIText = useMemo(() => {
+    return chatList
+      .filter(i => i.isAnswer && !i.isOpeningStatement)
+      .map(i => i.content)
+      .join(' ')
   }, [chatList])
 
   const renderSidebar = () => {
@@ -751,8 +755,15 @@ const Main: FC<IMainProps> = () => {
 
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
+  // Compute input bar margin based on panel state (desktop only)
+  // sidebar ~244px, panel 300px open / 48px collapsed / 0px mobile
+  const inputMarginLeft = isDesktop && hasSetInputs
+    ? isPanelCollapsed ? 98 : -28
+    : 122
+
   return (
     <div className='bg-gray-100'>
+      <BackExitGuard />
       <Header
         title={APP_INFO.title}
         isMobile={isMobile}
@@ -761,6 +772,7 @@ const Main: FC<IMainProps> = () => {
         onShowResourcePanel={showResourcePanel}
         hasSetInputs={hasSetInputs}
       />
+      <IncognitoNotice />
       <div className="flex rounded-t-2xl bg-white overflow-hidden">
         {/* sidebar */}
         {!isMobile && renderSidebar()}
@@ -799,6 +811,7 @@ const Main: FC<IMainProps> = () => {
                     fileConfig={fileConfig}
                     onDeleteMessage={handleDeleteMessage}
                     onReview={handleReview}
+                    inputMarginLeft={inputMarginLeft}
                   />
                   {/* Export button */}
                   {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
@@ -821,14 +834,18 @@ const Main: FC<IMainProps> = () => {
           </div>
           {/* Desktop resource panel */}
           {isDesktop && hasSetInputs && (
-            <ResourcePanel chatMessage={latestAIMessage} />
+            <ResourcePanel
+              accumulatedAIText={accumulatedAIText}
+              isCollapsed={isPanelCollapsed}
+              onToggleCollapse={togglePanelCollapse}
+            />
           )}
         </div>
       </div>
       {/* Mobile resource panel overlay */}
       {!isDesktop && (
         <ResourcePanel
-          chatMessage={latestAIMessage}
+          accumulatedAIText={accumulatedAIText}
           isMobileOverlay
           isVisible={isShowResourcePanel}
           onClose={hideResourcePanel}

@@ -113,36 +113,42 @@ const resourceIcons: Record<string, React.ReactNode> = {
 /* ─── Props ─────────────────────────────────────────────── */
 
 export interface ResourcePanelProps {
-    /** Latest AI message content — used for dynamic matching */
-    chatMessage?: string
+    /** All AI message text accumulated — used for dynamic matching */
+    accumulatedAIText?: string
     /** Mobile: controlled visibility */
     isVisible?: boolean
     /** Mobile: close callback */
     onClose?: () => void
     /** Whether this is rendered as a mobile overlay */
     isMobileOverlay?: boolean
+    /** Desktop: collapse state */
+    isCollapsed?: boolean
+    /** Desktop: toggle collapse callback */
+    onToggleCollapse?: () => void
 }
 
 /* ─── Component ─────────────────────────────────────────── */
 
 const ResourcePanel: FC<ResourcePanelProps> = ({
-    chatMessage = '',
+    accumulatedAIText = '',
     isVisible = true,
     onClose,
     isMobileOverlay = false,
+    isCollapsed = false,
+    onToggleCollapse,
 }) => {
-    const orderedResources = useMemo(() => matchResources(chatMessage), [chatMessage])
+    const orderedResources = useMemo(() => matchResources(accumulatedAIText), [accumulatedAIText])
 
     // Determine which resources are "highlighted" (matched keywords)
     const matchedIds = useMemo(() => {
-        if (!chatMessage || chatMessage.trim() === '') return new Set<string>()
-        const text = chatMessage.toLowerCase()
+        if (!accumulatedAIText || accumulatedAIText.trim() === '') return new Set<string>()
+        const text = accumulatedAIText.toLowerCase()
         return new Set(
             ALL_RESOURCES
                 .filter(r => r.keywords.some(kw => text.includes(kw)))
                 .map(r => r.id),
         )
-    }, [chatMessage])
+    }, [accumulatedAIText])
 
     const hasMatches = matchedIds.size > 0
 
@@ -163,16 +169,49 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
             transition: 'transform 200ms ease-out',
         }
         : {
-            width: 300,
+            width: isCollapsed ? 48 : 300,
             flexShrink: 0,
             backgroundColor: '#FBF8F4',
             borderLeft: '1px solid #E6DDD5',
             display: 'flex',
             flexDirection: 'column',
-            overflowY: 'auto',
+            overflowY: isCollapsed ? 'hidden' : 'auto',
             height: '100%',
             position: 'relative',
+            transition: 'width 200ms ease-out',
         }
+
+    if (!isMobileOverlay && isCollapsed) {
+        return (
+            <div style={panelStyle}>
+                <button
+                    onClick={onToggleCollapse}
+                    aria-label="展开资源面板"
+                    title="展开"
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 32,
+                        height: 48,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#B5A898',
+                        borderRadius: 4,
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                </button>
+            </div>
+        )
+    }
 
     return (
         <>
@@ -226,17 +265,43 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
                     }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <h2
-                            style={{
-                                fontFamily: "'Noto Serif SC', serif",
-                                fontSize: 15,
-                                fontWeight: 600,
-                                color: '#3D3028',
-                                margin: 0,
-                            }}
-                        >
-                            站内资源
-                        </h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {onToggleCollapse && (
+                                <button
+                                    onClick={onToggleCollapse}
+                                    aria-label="收起资源面板"
+                                    title="收起"
+                                    style={{
+                                        width: 24,
+                                        height: 24,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#B5A898',
+                                        borderRadius: 4,
+                                        padding: 0,
+                                    }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                </button>
+                            )}
+                            <h2
+                                style={{
+                                    fontFamily: "'Noto Serif SC', serif",
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    color: '#3D3028',
+                                    margin: 0,
+                                }}
+                            >
+                                站内资源
+                            </h2>
+                        </div>
                         {isMobileOverlay && onClose && (
                             <button
                                 onClick={onClose}
@@ -267,6 +332,11 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
 
                 {/* Resource List */}
                 <div style={{ padding: '12px 0', position: 'relative', zIndex: 1, flex: 1 }}>
+                    {!hasMatches && accumulatedAIText.trim() === '' && (
+                        <div style={{ padding: '32px 20px', textAlign: 'center', color: '#B5A898', fontSize: 12, lineHeight: 1.7 }}>
+                            开始倾诉，我会根据对话<br />为你推荐相关资源
+                        </div>
+                    )}
                     {orderedResources.map((resource, idx) => {
                         const isHighlighted = matchedIds.has(resource.id)
                         const isFirst = isHighlighted && idx === 0 && hasMatches
