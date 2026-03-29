@@ -20,11 +20,6 @@ const IconMapPin = () => (
     <circle cx="12" cy="10" r="3" />
   </svg>
 )
-const IconHeart = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="非批判陪伴">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-)
 const IconBook = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="受害者故事">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -56,11 +51,18 @@ const IconWechat = () => (
   </svg>
 )
 
+const IconMindBook = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="心理资源">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+    <path d="M12 8v4l3 3" />
+  </svg>
+)
+
 const features = [
   {
     icon: <IconChat />,
-    title: '24 小时倾听',
-    desc: '无论几点，小安都在。用文字说出你的困境，我们认真倾听每一句话。',
+    title: '24 小时倾听，非批判陪伴',
+    desc: '无论几点，小安都在。没有指责，只有支持。用文字说出你的困境，你的感受是真实的，你的选择值得被尊重。',
     num: '01',
   },
   {
@@ -77,9 +79,10 @@ const features = [
     num: '03',
   },
   {
-    icon: <IconHeart />,
-    title: '非批判陪伴',
-    desc: '这里没有指责，只有支持。你的感受是真实的，你的选择值得被尊重。',
+    icon: <IconMindBook />,
+    title: '心理资源支持库',
+    desc: '整合家暴防治教育资源：心理疗愈书籍、专业文章、支持性网站，帮助你了解、理解、走出困境。',
+    link: '/psych-resources',
     num: '04',
   },
   {
@@ -143,8 +146,31 @@ const LandingPage: FC = () => {
       <style dangerouslySetInnerHTML={{ __html: reducedMotionStyle }} />
 
       {/* ─── Hero ─────────────────────────────────── */}
-      <section style={{ padding: '96px 24px 72px' }}>
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <section style={{ padding: '96px 24px 72px', position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle background image */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: 'url(https://images.pexels.com/photos/574312/pexels-photo-574312.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 40%',
+            opacity: 0.10,
+            zIndex: 0,
+          }}
+        />
+        {/* Warm cream overlay for legibility */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(135deg, rgba(251,248,244,0.92) 0%, rgba(245,230,211,0.75) 60%, rgba(251,248,244,0.88) 100%)',
+            zIndex: 1,
+          }}
+        />
+        <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative', zIndex: 2 }}>
           <div
             style={{
               display: 'inline-flex',

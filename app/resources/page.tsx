@@ -32,7 +32,7 @@ export default function ResourcesPage() {
     <div style={{
       minHeight: '100vh',
       background: '#FBF8F4',
-      fontFamily: "'Noto Sans SC', system-ui, sans-serif",
+      fontFamily: '\'Noto Sans SC\', system-ui, sans-serif',
       color: '#3D3028',
     }}>
       <style dangerouslySetInnerHTML={{ __html: focusStyle }} />
@@ -53,7 +53,7 @@ export default function ResourcesPage() {
           position: 'absolute',
           left: '50%',
           transform: 'translateX(-50%)',
-          fontFamily: "'Noto Serif SC', serif",
+          fontFamily: '\'Noto Serif SC\', serif',
           fontSize: 16,
           color: '#3D3028',
           fontWeight: 600,
@@ -115,7 +115,7 @@ export default function ResourcesPage() {
         {categories.map(cat => (
           <section key={cat.id} id={cat.id} style={{ marginBottom: 48 }}>
             <h2 style={{
-              fontFamily: "'Noto Serif SC', serif",
+              fontFamily: '\'Noto Serif SC\', serif',
               fontSize: 18,
               color: '#3D3028',
               borderLeft: '3px solid #E8A87C',

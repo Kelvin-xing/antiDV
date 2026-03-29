@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
@@ -20,6 +20,7 @@ import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import Loading from '@/app/components/base/loading'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
 import AppUnavailable from '@/app/components/app-unavailable'
+import ResourcePanel from '@/app/components/resource-panel'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
@@ -33,6 +34,7 @@ const Main: FC<IMainProps> = () => {
   const { t } = useTranslation()
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
+  const isDesktop = media === MediaType.pc
   const hasSetAppConfig = APP_ID && API_KEY
 
   // Hash identity — auto-generate on first visit, prompt user to save
@@ -60,6 +62,7 @@ const Main: FC<IMainProps> = () => {
   const [inited, setInited] = useState<boolean>(false)
   // in mobile, show sidebar by click button
   const [isShowSidebar, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
+  const [isShowResourcePanel, { setTrue: showResourcePanel, setFalse: hideResourcePanel }] = useBoolean(false)
   const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
     enabled: false,
     number_limits: 2,
@@ -724,6 +727,12 @@ const Main: FC<IMainProps> = () => {
     setCurrConversationId('-1', APP_ID)
   }
 
+  const latestAIMessage = useMemo(() => {
+    const reversed = [...chatList].reverse()
+    const found = reversed.find(i => i.isAnswer && !i.isOpeningStatement)
+    return found?.content ?? ''
+  }, [chatList])
+
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
     return (
@@ -749,6 +758,8 @@ const Main: FC<IMainProps> = () => {
         isMobile={isMobile}
         onShowSideBar={showSidebar}
         onCreateNewChat={() => handleConversationIdChange('-1')}
+        onShowResourcePanel={showResourcePanel}
+        hasSetInputs={hasSetInputs}
       />
       <div className="flex rounded-t-2xl bg-white overflow-hidden">
         {/* sidebar */}
@@ -760,54 +771,69 @@ const Main: FC<IMainProps> = () => {
             </div>
           </div>
         )}
-        {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
-          <ConfigSence
-            conversationName={conversationName}
-            hasSetInputs={hasSetInputs}
-            isPublicVersion={isShowPrompt}
-            siteInfo={APP_INFO}
-            promptConfig={promptConfig}
-            onStartChat={handleStartChat}
-            canEditInputs={canEditInputs}
-            savedInputs={currInputs as Record<string, any>}
-            onInputsChange={setCurrInputs}
-          ></ConfigSence>
+        {/* main + resource panel */}
+        <div className='flex-grow flex h-[calc(100vh_-_3rem)] overflow-hidden'>
+          <div className='flex-grow flex flex-col overflow-y-auto'>
+            <ConfigSence
+              conversationName={conversationName}
+              hasSetInputs={hasSetInputs}
+              isPublicVersion={isShowPrompt}
+              siteInfo={APP_INFO}
+              promptConfig={promptConfig}
+              onStartChat={handleStartChat}
+              canEditInputs={canEditInputs}
+              savedInputs={currInputs as Record<string, any>}
+              onInputsChange={setCurrInputs}
+            ></ConfigSence>
 
-          {
-            hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
-                <Chat
-                  chatList={chatList}
-                  onSend={handleSend}
-                  onFeedback={handleFeedback}
-                  isResponding={isResponding}
-                  checkCanSend={checkCanSend}
-                  visionConfig={visionConfig}
-                  fileConfig={fileConfig}
-                  onDeleteMessage={handleDeleteMessage}
-                  onReview={handleReview}
-                />
-                {/* Export button */}
-                {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
-                  <div className="flex justify-end px-2 pt-1 pb-2">
-                    <button
-                      onClick={handleExport}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      导出聊天记录 (.xlsx)
-                    </button>
-                  </div>
-                )}
-              </div>)
-          }
+            {
+              hasSetInputs && (
+                <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+                  <Chat
+                    chatList={chatList}
+                    onSend={handleSend}
+                    onFeedback={handleFeedback}
+                    isResponding={isResponding}
+                    checkCanSend={checkCanSend}
+                    visionConfig={visionConfig}
+                    fileConfig={fileConfig}
+                    onDeleteMessage={handleDeleteMessage}
+                    onReview={handleReview}
+                  />
+                  {/* Export button */}
+                  {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
+                    <div className="flex justify-end px-2 pt-1 pb-2">
+                      <button
+                        onClick={handleExport}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        导出聊天记录 (.xlsx)
+                      </button>
+                    </div>
+                  )}
+                </div>)
+            }
+          </div>
+          {/* Desktop resource panel */}
+          {isDesktop && hasSetInputs && (
+            <ResourcePanel chatMessage={latestAIMessage} />
+          )}
         </div>
       </div>
+      {/* Mobile resource panel overlay */}
+      {!isDesktop && (
+        <ResourcePanel
+          chatMessage={latestAIMessage}
+          isMobileOverlay
+          isVisible={isShowResourcePanel}
+          onClose={hideResourcePanel}
+        />
+      )}
     </div>
   )
 }

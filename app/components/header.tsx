@@ -12,12 +12,16 @@ export interface IHeaderProps {
   isMobile?: boolean
   onShowSideBar?: () => void
   onCreateNewChat?: () => void
+  onShowResourcePanel?: () => void
+  hasSetInputs?: boolean
 }
 const Header: FC<IHeaderProps> = ({
   title,
   isMobile,
   onShowSideBar,
   onCreateNewChat,
+  onShowResourcePanel,
+  hasSetInputs,
 }) => {
   return (
     <div className="shrink-0 flex items-center justify-between h-12 px-3" style={{ backgroundColor: '#F5E6D3', borderBottom: '1px solid #E6DDD5' }}>
@@ -52,8 +56,23 @@ const Header: FC<IHeaderProps> = ({
 
       {isMobile
         ? (
-          <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()} >
-            <PencilSquareIcon className="h-4 w-4" style={{ color: '#8F7E6E' }} />
+          <div className='flex items-center gap-0.5'>
+            {hasSetInputs && (
+              <div
+                className='flex items-center justify-center h-8 w-8 cursor-pointer'
+                onClick={() => onShowResourcePanel?.()}
+                title="心理资源"
+              >
+                {/* Book open icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8F7E6E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                </svg>
+              </div>
+            )}
+            <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()} >
+              <PencilSquareIcon className="h-4 w-4" style={{ color: '#8F7E6E' }} />
+            </div>
           </div>)
         : <div></div>}
     </div>
