@@ -785,6 +785,12 @@ const Main: FC<IMainProps> = () => {
         {/* main + resource panel */}
         <div className='flex-grow flex h-[calc(100vh_-_3rem)] overflow-hidden'>
           <div className='flex-grow flex flex-col overflow-y-auto'>
+            {/* Conversation name header */}
+            <div className="shrink-0 px-4 py-3" style={{ borderBottom: '1px solid #F0EBE5' }}>
+              <h1 className="text-base font-semibold" style={{ color: '#3D3028', fontFamily: "'Noto Serif SC', serif" }}>
+                {conversationName}
+              </h1>
+            </div>
             <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
               <Chat
                 chatList={chatList}
