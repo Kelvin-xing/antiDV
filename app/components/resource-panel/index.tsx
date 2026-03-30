@@ -184,33 +184,29 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
     if (!isMobileOverlay && isCollapsed) {
         return (
             <div style={panelStyle}>
-                {/* Header — same padding/structure as expanded to keep border-bottom aligned */}
-                <div style={{ padding: '20px 0 16px', borderBottom: '1px solid #E6DDD5', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                        <button
-                            onClick={onToggleCollapse}
-                            aria-label="展开资源面板"
-                            title="展开"
-                            style={{
-                                width: 24,
-                                height: 24,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#B5A898',
-                                borderRadius: 4,
-                            }}
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="15 18 9 12 15 6" />
-                            </svg>
-                        </button>
-                    </div>
-                    {/* Invisible spacer matching expanded subtitle height */}
-                    <div style={{ fontSize: 12, lineHeight: 1.4, visibility: 'hidden', userSelect: 'none' }} aria-hidden="true">x</div>
+                {/* Header — h-12 (48px) to match chat area header */}
+                <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #E6DDD5', flexShrink: 0 }}>
+                    <button
+                        onClick={onToggleCollapse}
+                        aria-label="展开资源面板"
+                        title="展开"
+                        style={{
+                            width: 24,
+                            height: 24,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#B5A898',
+                            borderRadius: 4,
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         )
@@ -257,75 +253,81 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
                     }}
                 />
 
-                {/* Header */}
+                {/* Header — h-12 (48px) to match chat area header */}
                 <div
                     style={{
-                        padding: '20px 20px 16px',
+                        height: 48,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0 16px',
                         borderBottom: '1px solid #E6DDD5',
                         position: 'relative',
                         zIndex: 1,
                         flexShrink: 0,
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {onToggleCollapse && (
-                                <button
-                                    onClick={onToggleCollapse}
-                                    aria-label="收起资源面板"
-                                    title="收起"
-                                    style={{
-                                        width: 24,
-                                        height: 24,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: '#B5A898',
-                                        borderRadius: 4,
-                                        padding: 0,
-                                    }}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="9 18 15 12 9 6" />
-                                    </svg>
-                                </button>
-                            )}
-                            <h2
-                                style={{
-                                    fontFamily: "'Noto Serif SC', serif",
-                                    fontSize: 15,
-                                    fontWeight: 600,
-                                    color: '#3D3028',
-                                    margin: 0,
-                                }}
-                            >
-                                站内资源
-                            </h2>
-                        </div>
-                        {isMobileOverlay && onClose && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {onToggleCollapse && (
                             <button
-                                onClick={onClose}
-                                aria-label="关闭资源面板"
+                                onClick={onToggleCollapse}
+                                aria-label="收起资源面板"
+                                title="收起"
                                 style={{
-                                    width: 32,
-                                    height: 32,
+                                    width: 24,
+                                    height: 24,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     background: 'none',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    color: '#7A6B5D',
+                                    color: '#B5A898',
                                     borderRadius: 4,
+                                    padding: 0,
                                 }}
                             >
-                                <IconClose />
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
                             </button>
                         )}
+                        <h2
+                            style={{
+                                fontFamily: "'Noto Serif SC', serif",
+                                fontSize: 15,
+                                fontWeight: 600,
+                                color: '#3D3028',
+                                margin: 0,
+                            }}
+                        >
+                            站内资源
+                        </h2>
                     </div>
+                    {isMobileOverlay && onClose && (
+                        <button
+                            onClick={onClose}
+                            aria-label="关闭资源面板"
+                            style={{
+                                width: 32,
+                                height: 32,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#7A6B5D',
+                                borderRadius: 4,
+                            }}
+                        >
+                            <IconClose />
+                        </button>
+                    )}
+                </div>
+
+                {/* Subtitle */}
+                <div style={{ padding: '8px 16px 0', position: 'relative', zIndex: 1, flexShrink: 0 }}>
                     <p style={{ fontSize: 12, color: '#7A6B5D', margin: 0, lineHeight: 1.4 }}>
                         {hasMatches
                             ? '根据对话内容为你推荐相关资源'
