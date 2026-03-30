@@ -61,16 +61,16 @@ const Sidebar: FC<ISidebarProps> = ({
     <div
       className="shrink-0 flex flex-col tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
       style={{
-        width: isCollapsed ? 64 : undefined,
-        flexBasis: isCollapsed ? 64 : undefined,
+        width: isCollapsed ? 48 : undefined,
+        flexBasis: isCollapsed ? 48 : undefined,
         backgroundColor: '#FAF6F2',
         borderRight: '1px solid #E6DDD5',
         transition: 'width 200ms ease-out',
         overflow: 'hidden',
       }}
     >
-      {/* Header — h-12 (64px) to match chat area header */}
-      <div style={{ height: 64, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px solid #E6DDD5', flexShrink: 0, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+      {/* Header — h-12 (48px) to match chat area header */}
+      <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px solid #E6DDD5', flexShrink: 0, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
         <button
           onClick={onToggleCollapse}
           aria-label={isCollapsed ? '展开左边栏' : '收起左边栏'}
@@ -145,6 +145,17 @@ const Sidebar: FC<ISidebarProps> = ({
           </div>
         )}
 
+        {/* Identity button */}
+        <div className="flex flex-shrink-0 px-4 pt-3">
+          <button
+            onClick={() => setShowHashPanel(true)}
+            className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
+            style={{ backgroundColor: '#F2EDE8', color: '#8C7B6E', border: '1px solid #E6DDD5' }}
+          >
+            🔑 我的身份识别码
+          </button>
+        </div>
+
         <nav className="mt-4 flex-1 min-h-0 overflow-y-auto space-y-1 p-4 !pt-0" style={{ backgroundColor: '#FAF6F2' }}>
           {list.map((item) => {
             const isCurrent = item.id === currentId
@@ -206,17 +217,6 @@ const Sidebar: FC<ISidebarProps> = ({
             )
           })}
         </nav>
-
-        {/* Identity button */}
-        <div className="flex flex-shrink-0 px-4 pb-2">
-          <button
-            onClick={() => setShowHashPanel(true)}
-            className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: '#F2EDE8', color: '#8C7B6E', border: '1px solid #E6DDD5' }}
-          >
-            🔑 我的身份识别码
-          </button>
-        </div>
 
         <div className="flex flex-shrink-0 pr-4 pb-4 pl-4">
           <div className="font-normal text-xs" style={{ color: '#B5A898' }}>© {copyRight} {(new Date()).getFullYear()}</div>

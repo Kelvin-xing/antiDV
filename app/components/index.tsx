@@ -117,11 +117,7 @@ const Main: FC<IMainProps> = () => {
     // parse variables in introduction
     setChatList(generateNewChatListWithOpenStatement('', inputs))
   }
-  const hasSetInputs = (() => {
-    if (!isNewConversation) { return true }
-
-    return isChatStarted
-  })()
+  const hasSetInputs = true
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
   const conversationIntroduction = currConversationInfo?.introduction || ''
@@ -176,7 +172,7 @@ const Main: FC<IMainProps> = () => {
       })
     }
 
-    if (isNewConversation && isChatStarted) { setChatList(generateNewChatListWithOpenStatement()) }
+    if (isNewConversation) { setChatList(generateNewChatListWithOpenStatement()) }
   }
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
@@ -789,52 +785,37 @@ const Main: FC<IMainProps> = () => {
         {/* main + resource panel */}
         <div className='flex-grow flex h-[calc(100vh_-_3rem)] overflow-hidden'>
           <div className='flex-grow flex flex-col overflow-y-auto'>
-            <ConfigSence
-              conversationName={conversationName}
-              hasSetInputs={hasSetInputs}
-              isPublicVersion={isShowPrompt}
-              siteInfo={APP_INFO}
-              promptConfig={promptConfig}
-              onStartChat={handleStartChat}
-              canEditInputs={canEditInputs}
-              savedInputs={currInputs as Record<string, any>}
-              onInputsChange={setCurrInputs}
-            ></ConfigSence>
-
-            {
-              hasSetInputs && (
-                <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
-                  <Chat
-                    chatList={chatList}
-                    onSend={handleSend}
-                    onFeedback={handleFeedback}
-                    isResponding={isResponding}
-                    checkCanSend={checkCanSend}
-                    visionConfig={visionConfig}
-                    fileConfig={fileConfig}
-                    onDeleteMessage={handleDeleteMessage}
-                    onReview={handleReview}
-                    inputLeft={inputLeft}
-                    inputRight={inputRight}
-                  />
-                  {/* Export button */}
-                  {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
-                    <div className="flex justify-end px-2 pt-1 pb-2">
-                      <button
-                        onClick={handleExport}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                        导出聊天记录 (.xlsx)
-                      </button>
-                    </div>
-                  )}
-                </div>)
-            }
+            <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+              <Chat
+                chatList={chatList}
+                onSend={handleSend}
+                onFeedback={handleFeedback}
+                isResponding={isResponding}
+                checkCanSend={checkCanSend}
+                visionConfig={visionConfig}
+                fileConfig={fileConfig}
+                onDeleteMessage={handleDeleteMessage}
+                onReview={handleReview}
+                inputLeft={inputLeft}
+                inputRight={inputRight}
+              />
+              {/* Export button */}
+              {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
+                <div className="flex justify-end px-2 pt-1 pb-2">
+                  <button
+                    onClick={handleExport}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    导出聊天记录 (.xlsx)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           {/* Desktop resource panel */}
           {isDesktop && hasSetInputs && (

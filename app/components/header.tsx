@@ -24,7 +24,7 @@ const Header: FC<IHeaderProps> = ({
   hasSetInputs,
 }) => {
   return (
-    <div className="shrink-0 flex items-center justify-between h-12 px-3" style={{ backgroundColor: '#F5E6D3', borderBottom: '1px solid #E6DDD5' }}>
+    <div className="shrink-0 flex items-center justify-between h-12 px-3 sticky top-0 z-50" style={{ backgroundColor: '#F5E6D3', borderBottom: '1px solid #E6DDD5' }}>
       {/* Left: home button + (mobile) hamburger */}
       <div className="flex items-center gap-1">
         <Link

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const ESCAPE_URL = 'https://www.weather.com.cn/'
 const USER_HASH_KEY = 'xiaoAn_user_hash'
@@ -23,6 +23,7 @@ export function quickEscape() {
 export default function QuickExit() {
   // null = use default CSS position (top-right); once dragged, track in px
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const dragRef = useRef<{
     startX: number
     startY: number
@@ -36,6 +37,14 @@ export default function QuickExit() {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') quickEscape() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
   }, [])
 
   const startDrag = (clientX: number, clientY: number) => {
@@ -115,9 +124,14 @@ export default function QuickExit() {
         backgroundColor: '#E8A87C',
         color: '#fff',
         border: 'none',
-        borderRadius: '20px',
-        padding: '6px 14px',
-        fontSize: '13px',
+        borderRadius: isMobile ? '50%' : '20px',
+        padding: isMobile ? '0' : '6px 14px',
+        width: isMobile ? '32px' : undefined,
+        height: isMobile ? '32px' : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: isMobile ? '15px' : '13px',
         fontWeight: 700,
         boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
         letterSpacing: '0.03em',
@@ -131,7 +145,7 @@ export default function QuickExit() {
       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D98B5A')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E8A87C')}
     >
-      快速离开
+      {isMobile ? '✕' : '快速离开'}
     </button>
   )
 }
