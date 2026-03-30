@@ -253,14 +253,14 @@ const LandingPage: FC = () => {
               开始倾诉 →
             </Link>
 
-            <div style={{ marginTop: 20 }}>
+            {/* <div style={{ marginTop: 20 }}>
               <Link href="/stories" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 24 }}>
                 受害者故事
               </Link>
               <Link href="/docs-toolkit" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3 }}>
                 文档工具库
               </Link>
-            </div>
+            </div> */}
 
             <p style={{ fontSize: 13, color: '#7A6B5D', marginTop: 24 }}>
               紧急情况请拨&nbsp;

@@ -69,26 +69,41 @@ const Sidebar: FC<ISidebarProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Collapse / expand toggle — always visible at the top */}
-      <div style={{ padding: '14px 0 0', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-end', paddingRight: isCollapsed ? 0 : 8, borderBottom: isCollapsed ? '1px solid #E6DDD5' : 'none', paddingBottom: isCollapsed ? 14 : 0, flexShrink: 0 }}>
-        <button
-          onClick={onToggleCollapse}
-          aria-label={isCollapsed ? '展开左边栏' : '收起左边栏'}
-          title={isCollapsed ? '展开' : '收起'}
-          style={{
-            width: 24, height: 24,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#B5A898', borderRadius: 4,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {isCollapsed
-              ? <polyline points="9 18 15 12 9 6" />
-              : <polyline points="15 18 9 12 15 6" />
-            }
-          </svg>
-        </button>
+      {/* Header — always visible, matches resource-panel header height */}
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #E6DDD5', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+          <button
+            onClick={onToggleCollapse}
+            aria-label={isCollapsed ? '展开左边栏' : '收起左边栏'}
+            title={isCollapsed ? '展开' : '收起'}
+            style={{
+              width: 24, height: 24, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#B5A898', borderRadius: 4,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {isCollapsed
+                ? <polyline points="15 18 9 12 15 6" />
+                : <polyline points="9 18 15 12 9 6" />
+              }
+            </svg>
+          </button>
+          <h2 style={{
+            fontFamily: "'Noto Serif SC', serif",
+            fontSize: 15, fontWeight: 600, color: '#3D3028', margin: 0,
+            visibility: isCollapsed ? 'hidden' : 'visible',
+          }}>
+            历史对话
+          </h2>
+        </div>
+        <p style={{
+          fontSize: 12, color: '#7A6B5D', margin: 0, lineHeight: 1.4,
+          visibility: isCollapsed ? 'hidden' : 'visible',
+        }}>
+          往期对话记录
+        </p>
       </div>
 
       {/* Content — hidden when collapsed */}

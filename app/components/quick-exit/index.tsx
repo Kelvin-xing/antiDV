@@ -131,7 +131,7 @@ export default function QuickExit() {
       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D98B5A')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E8A87C')}
     >
-      快速离开 ✕
+      快速离开
     </button>
   )
 }

@@ -184,29 +184,33 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
     if (!isMobileOverlay && isCollapsed) {
         return (
             <div style={panelStyle}>
-                {/* Header row — mirrors the expanded header position */}
-                <div style={{ padding: '20px 0 16px', borderBottom: '1px solid #E6DDD5', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-                    <button
-                        onClick={onToggleCollapse}
-                        aria-label="展开资源面板"
-                        title="展开"
-                        style={{
-                            width: 24,
-                            height: 24,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#B5A898',
-                            borderRadius: 4,
-                        }}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="15 18 9 12 15 6" />
-                        </svg>
-                    </button>
+                {/* Header — same padding/structure as expanded to keep border-bottom aligned */}
+                <div style={{ padding: '20px 0 16px', borderBottom: '1px solid #E6DDD5', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                        <button
+                            onClick={onToggleCollapse}
+                            aria-label="展开资源面板"
+                            title="展开"
+                            style={{
+                                width: 24,
+                                height: 24,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#B5A898',
+                                borderRadius: 4,
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+                    </div>
+                    {/* Invisible spacer matching expanded subtitle height */}
+                    <div style={{ fontSize: 12, lineHeight: 1.4, visibility: 'hidden', userSelect: 'none' }} aria-hidden="true">x</div>
                 </div>
             </div>
         )
@@ -339,7 +343,7 @@ const ResourcePanel: FC<ResourcePanelProps> = ({
                             开始倾诉<br />资源将根据对话自动推荐
                         </div>
                     )}
-                    {orderedResources.map((resource, idx) => {
+                    {accumulatedAIText.trim() !== '' && orderedResources.map((resource, idx) => {
                         const isHighlighted = matchedIds.has(resource.id)
                         const isFirst = isHighlighted && idx === 0 && hasMatches
                         const LinkWrapper: FC<{ children: React.ReactNode }> = ({ children }) =>
