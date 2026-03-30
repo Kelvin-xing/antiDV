@@ -135,9 +135,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 /* Hero two-column layout */
 .hero-demo { display: none; }
 @media (min-width: 1024px) {
-  .hero-inner { display: flex; align-items: flex-start; gap: 64px; max-width: 1200px !important; }
+  .hero-inner { display: flex; align-items: flex-start; gap: 40px; max-width: 960px !important; }
   .hero-content { flex: 1; }
-  .hero-demo { display: flex; flex-direction: column; width: 360px; flex-shrink: 0; }
+  .hero-demo { display: flex; flex-direction: column; width: 340px; flex-shrink: 0; }
 }
 /* Demo chat bubble animations */
 @keyframes fadeInUp {
