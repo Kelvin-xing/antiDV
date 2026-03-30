@@ -61,16 +61,16 @@ const Sidebar: FC<ISidebarProps> = ({
     <div
       className="shrink-0 flex flex-col tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
       style={{
-        width: isCollapsed ? 48 : undefined,
-        flexBasis: isCollapsed ? 48 : undefined,
+        width: isCollapsed ? 64 : undefined,
+        flexBasis: isCollapsed ? 64 : undefined,
         backgroundColor: '#FAF6F2',
         borderRight: '1px solid #E6DDD5',
         transition: 'width 200ms ease-out',
         overflow: 'hidden',
       }}
     >
-      {/* Header — h-12 (48px) to match chat area header */}
-      <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px solid #E6DDD5', flexShrink: 0, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+      {/* Header — h-12 (64px) to match chat area header */}
+      <div style={{ height: 64, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px solid #E6DDD5', flexShrink: 0, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
         <button
           onClick={onToggleCollapse}
           aria-label={isCollapsed ? '展开左边栏' : '收起左边栏'}
