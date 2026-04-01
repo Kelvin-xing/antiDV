@@ -290,7 +290,9 @@ const LandingPage: FC = () => {
               {/* messages */}
               <div style={{ padding: '18px 14px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 260 }}>
                 <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🤍</div>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, overflow: 'hidden' }}>
+                    <img src="/avatar.png" alt="小安" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                  </div>
                   <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
                     你好，我是小安。不论发生什么，我都在这里，没有评判，只有陪伴。
                   </div>
@@ -302,7 +304,9 @@ const LandingPage: FC = () => {
                   </div>
                 </div>
                 <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🤍</div>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, overflow: 'hidden' }}>
+                    <img src="/avatar.png" alt="小安" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                  </div>
                   <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
                     我听到你了。你的感受很真实。能告诉我，现在你安全吗？
                   </div>

@@ -1,8 +1,8 @@
 .answerIcon {
   position: relative;
-  background: url(./icons/sister.svg);
-  background-size: 160%;
-  background-position: 48% 22%;
+  background: url('/avatar.png');
+  background-size: cover;
+  background-position: center top;
   border-radius: 50%;
   background-color: #F5E6D3;
 }
