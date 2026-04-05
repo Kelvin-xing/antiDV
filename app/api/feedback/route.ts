@@ -1,97 +1,88 @@
 import type { NextRequest } from 'next/server'
 
-/**
- * Feedback API — Vercel-compatible.
- * Uses in-memory Map + /tmp fallback for persistence within a single instance.
- * Admin page polls GET for updates.
- */
-
 export interface FeedbackEntry {
-  id: string
-  userHash: string
-  conversationId: string
-  conversationName: string
-  chatList: any[]
-  updatedAt: number
+    id: string
+    userHash: string
+    conversationId: string
+    conversationName: string
+    chatList: any[]
+    updatedAt: number
 }
 
-// In-memory store (survives across requests within the same serverless instance)
 const store = new Map<string, FeedbackEntry>()
 
-// Attempt /tmp persistence for cold-start recovery
 const TMP_FILE = '/tmp/xiaoAn_feedback.json'
 
 function loadFromTmp() {
-  if (store.size > 0) return // already loaded
-  try {
-    const fs = require('fs')
-    if (fs.existsSync(TMP_FILE)) {
-      const entries: FeedbackEntry[] = JSON.parse(fs.readFileSync(TMP_FILE, 'utf-8'))
-      entries.forEach(e => store.set(e.id, e))
+    if (store.size > 0) return
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const fs = require('fs')
+        if (fs.existsSync(TMP_FILE)) {
+            const entries: FeedbackEntry[] = JSON.parse(fs.readFileSync(TMP_FILE, 'utf-8'))
+            entries.forEach((e: FeedbackEntry) => store.set(e.id, e))
+        }
+    } catch {
+        // /tmp read failed, start fresh
     }
-  } catch { /* /tmp read failed — start freshimport type { NextRequest } from 'next/server'
+}
 
-/**
- * Feedback API — Vercel-compatible.
- *y.
-/**
- * Feedback API — Vercel-compatible.
- _FI *,  * Uses in-memory Map + /tmp fallback c * Admin page polls GET for updates.
- */
+function saveToTmp() {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const fs = require('fs')
+        const entries = Array.from(store.values())
+        fs.writeFileSync(TMP_FILE, JSON.stringify(entries), 'utf-8')
+    } catch {
+        // /tmp write failed, ignore
+    }
+}
 
-export interface FeedbackEntry {
-  i u */
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json()
+        const { userHash, conversationId, conversationName, chatList } = body
 
-export interface FeedbackEntryue
-e: N  id: string
-  userHash: string b  userHash: r  conversationId: c  conversarHash, conversa  chatList: any[]
-  updat c  updatedAt: num
+        if (!conversationId || !chatList) {
+            return Response.json({ error: 'Missing required fields' }, { status: 400 })
+        }
 
-    if (!conversationIdconst store = new Map<string, FeedbackEntry>()
+        const entryId = (userHash || 'anon') + '::' + conversationId
+        const entry: FeedbackEntry = {
+            id: entryId,
+            userHash: userHash || 'anonymous',
+            conversationId,
+            conversationName: conversationName || '新的对话',
+            chatList,
+            updatedAt: Date.now(),
+        }
 
-// Attempt /tmp persistence for , 
-// Attempt /tmp persistence for cold-start r${uconst TMP_FILE = '/tmp/xiaoAn_feedback.json'
+        store.set(entryId, entry)
+        saveToTmp()
 
-funcnt
-function loadFromTmp() {
-  if (store.size      if (store.size > 0) r'a  try {
-    const fs = require('fs')
-    if (sa    come    if (fs.existsSync(TM??的      const entries: FeedbackEntrda      entries.forEac   }
+        return Response.json({ ok: true })
+    } catch (err: any) {
+        return Response.json({ error: err.message }, { status: 500 })
+    }
+}
 
-    store.set(entryId, entry)
-    saveToTmp()
+export async function GET(request: NextRequest) {
+    try {
+        loadFromTmp()
 
-    return Re    }
-  } catch { /* /tmp read failed — sta)  
-    
-/**
- * Feedback API — Vercel-compatible.
- *y.
-/**
- * Feedback API — Vercel-compatible.
-s f * a *y.
-/**
- * Feedback API — Vercel-cam/*
-ex *rt _FI *,  * Uses in-memory Map + /tmp es */
+        const url = new URL(request.url)
+        const since = Number(url.searchParams.get('since')) || 0
 
-export interface FeedbackEntry {
-  i u */
+        const entries = Array.from(store.values())
+            .filter((e: FeedbackEntry) => e.updatedAt > since)
+            .sort((a: FeedbackEntry, b: FeedbackEntry) => b.updatedAt - a.updatedAt)
 
-export interface FeedbackEntryue
-e  
-econ  i u */
-
-export interface Feedge
-exporte')e: N  id: string
-  userHash: stay  userHash: strue  updat c  updatedAt: num
-
-    if (!conversationIdconst store = new Map<string, FeedbackEntry
-
-
-    if (!conversationId({
-
-// Attempt /tmp persistence for , 
-// Attempt /tmp persistence for 
-  // Attempt /tmp persistence for ceturn Response.json({ error: err.message }, { status: 500 })
-  }
+        return Response.json({
+            entries,
+            total: store.size,
+            timestamp: Date.now(),
+        })
+    } catch (err: any) {
+        return Response.json({ error: err.message }, { status: 500 })
+    }
 }
