@@ -1,5 +1,6 @@
 'use client'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 
 /* ────────────────────── Types ────────────────────── */
 
@@ -251,6 +252,83 @@ function WorkflowDetail({ nodes, status }: { nodes: WorkflowNode[]; status?: str
     )
 }
 
+/* ────────────────────── Download Helpers ────────────────────── */
+
+function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+}
+
+function downloadJSON(entries: FeedbackEntry[]) {
+    const exportData = entries.map(entry => {
+        const pairs = buildQAPairs(entry.chatList)
+        return {
+            userHash: entry.userHash,
+            conversationId: entry.conversationId,
+            conversationName: entry.conversationName,
+            updatedAt: new Date(entry.updatedAt).toISOString(),
+            qaPairs: pairs.map(p => ({
+                question: p.question,
+                answer: p.answer,
+                feedbackRating: p.feedback?.rating || null,
+                reviewScore: p.userReview?.score || null,
+                reviewComment: p.userReview?.comment || null,
+                workflowStatus: p.workflowStatus || null,
+                workflowSteps: p.workflowSteps || null,
+                workflowNodes: p.workflowNodes || null,
+            })),
+            rawChatList: entry.chatList,
+        }
+    })
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    triggerDownload(blob, `feedback-export-${ts}.json`)
+}
+
+function downloadXLSX(entries: FeedbackEntry[]) {
+    const rows: Record<string, any>[] = []
+    entries.forEach(entry => {
+        const pairs = buildQAPairs(entry.chatList)
+        pairs.forEach((p, idx) => {
+            rows.push({
+                '用户': entry.userHash,
+                '会话名称': entry.conversationName,
+                '会话ID': entry.conversationId,
+                '更新时间': new Date(entry.updatedAt).toLocaleString('zh-CN'),
+                '轮次': idx + 1,
+                '专家提问': p.question,
+                'Bot回答': p.answer,
+                '用户反馈': p.feedback?.rating === 'like' ? '赞同' : p.feedback?.rating === 'dislike' ? '反对' : '',
+                '评分': p.userReview?.score ?? '',
+                '评分等级': p.userReview?.score ? (SCORE_LABELS[p.userReview.score] || '') : '',
+                '专家评语': p.userReview?.comment ?? '',
+                '工作流状态': p.workflowStatus ?? '',
+                '工作流步骤': p.workflowSteps ?? '',
+                '工作流节点数': p.workflowNodes?.length ?? 0,
+                '工作流详情JSON': p.workflowNodes ? JSON.stringify(p.workflowNodes) : '',
+            })
+        })
+    })
+    const ws = XLSX.utils.json_to_sheet(rows)
+    // Auto-width columns
+    const colWidths = Object.keys(rows[0] || {}).map(key => ({
+        wch: Math.max(key.length * 2, ...rows.map(r => String(r[key] || '').slice(0, 50).length + 2)),
+    }))
+    ws['!cols'] = colWidths
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '反馈记录')
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    triggerDownload(blob, `feedback-export-${ts}.xlsx`)
+}
+
 /* ────────────────────── Main Page ────────────────────── */
 
 export default function FeedbackAdminPage() {
@@ -339,11 +417,31 @@ export default function FeedbackAdminPage() {
                             </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-6 text-sm" style={{ color: '#8F7E6E' }}>
-                        <span>用户会话: <b className="text-base" style={{ color: '#3D3028' }}>{entries.length}</b></span>
-                        <span>总问答: <b className="text-base" style={{ color: '#3D3028' }}>{allPairs.length}</b></span>
-                        <span>已评价: <b className="text-base" style={{ color: '#E8A87C' }}>{totalReviews}</b></span>
-                        <span>均分: <b className="text-base" style={{ color: '#E8A87C' }}>{avgScore}</b></span>
+                    <div className="flex items-center gap-4 text-sm" style={{ color: '#8F7E6E' }}>
+                        <span>会话: <b style={{ color: '#3D3028' }}>{entries.length}</b></span>
+                        <span>问答: <b style={{ color: '#3D3028' }}>{allPairs.length}</b></span>
+                        <span>已评: <b style={{ color: '#E8A87C' }}>{totalReviews}</b></span>
+                        <span>均分: <b style={{ color: '#E8A87C' }}>{avgScore}</b></span>
+                        <div className="flex items-center gap-1.5 ml-2">
+                            <button
+                                onClick={() => entries.length > 0 && downloadJSON(entries)}
+                                disabled={entries.length === 0}
+                                className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
+                                style={{ backgroundColor: '#7CB9A8', color: '#fff' }}
+                                title="下载完整 JSON（含工作流详情）"
+                            >
+                                ⬇ JSON
+                            </button>
+                            <button
+                                onClick={() => entries.length > 0 && downloadXLSX(entries)}
+                                disabled={entries.length === 0}
+                                className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
+                                style={{ backgroundColor: '#E8A87C', color: '#fff' }}
+                                title="下载 Excel 表格（含评分和评语）"
+                            >
+                                ⬇ XLSX
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>

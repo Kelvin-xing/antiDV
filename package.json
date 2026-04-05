@@ -20,6 +20,7 @@
     "@mdx-js/loader": "^3.1.0",
     "@mdx-js/react": "^3.1.0",
     "@monaco-editor/react": "^4.6.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@remixicon/react": "^4.6.0",
     "@types/node": "~18.19.0",
     "@types/react": "~18.3.23",
