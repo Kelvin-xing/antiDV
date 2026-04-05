@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test:load:ui": "ts-node load-test/playwright-ui-test.ts",
+    "test:load:api": "k6 run load-test/k6-api-test.js",
+    "test:load:all": "npm run test:load:ui && npm run test:load:api",
+    "test:load:menu": "bash load-test/run-tests.sh",
+    "test:load:report": "open load-test/dashboard.html || xdg-open load-test/dashboard.html || echo 'Please open load-test/dashboard.html manually'"
+  }
+}

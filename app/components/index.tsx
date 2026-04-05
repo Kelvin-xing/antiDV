@@ -27,6 +27,7 @@ import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/confi
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
 import { useUserHash } from '@/hooks/use-user-hash'
+import { broadcastFeedback, flushFeedback } from '@/utils/feedback-broadcast'
 
 export interface IMainProps {
   params: any
@@ -205,6 +206,19 @@ const Main: FC<IMainProps> = () => {
       }, 50)
     }
   }, [chatList, currConversationId])
+
+  // Broadcast chat data to /feedback admin page in real-time (cross-device)
+  useEffect(() => {
+    if (chatList.length === 0) return
+    broadcastFeedback({
+      userHash: currentHash || undefined,
+      conversationId: currConversationId,
+      conversationName,
+      chatList,
+      timestamp: Date.now(),
+    })
+  }, [chatList, currConversationId, conversationName, currentHash])
+
   // user can not edit inputs if user had send message
   const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
   const createNewChat = () => {
@@ -664,10 +678,20 @@ const Main: FC<IMainProps> = () => {
   }
 
   const handleReview = (messageId: string, review: { score: number; comment: string }) => {
-    setChatList(produce(getChatList(), (draft) => {
+    const newList = produce(getChatList(), (draft) => {
       const item = draft.find(i => i.id === messageId)
       if (item) { item.userReview = review }
-    }))
+    })
+    setChatList(newList)
+    // Immediately push review to server so admin sees it without delay
+    broadcastFeedback({
+      userHash: currentHash || undefined,
+      conversationId: currConversationId,
+      conversationName,
+      chatList: newList,
+      timestamp: Date.now(),
+    })
+    flushFeedback()
     notify({ type: 'success', message: '评价已保存' })
   }
 

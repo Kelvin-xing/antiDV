@@ -51,3 +51,9 @@ yarn.lock
 .serena
 # pmpm
 pnpm-lock.yaml
+
+# feedback data (server-side)
+.feedback-data/
+
+#test
+/Users/mingjiexing/Desktop/ADVchatbot/frontend/load-test

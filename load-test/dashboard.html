@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>聊天机器人压力测试仪表板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+                sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .stat-card.error {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .stat-card.warning {
+            background: linear-gradient(135deg, #ffa751 0%, #ffe259 100%);
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-card .unit {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .details-table {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .details-table h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            color: #333;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .status-badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 聊天机器人压力测试仪表板</h1>
+            <p>实时监控前端 UI 和后端 API 性能指标</p>
+            <p id="lastUpdate" style="color: #999; margin-top: 5px;">等待数据...</p>
+        </div>
+
+        <div class="controls">
+            <div class="button-group">
+                <button class="btn-primary" onclick="loadPlaywrightReport()">
+                    📊 加载 Playwright 前端测试报告
+                </button>
+                <button class="btn-primary" onclick="loadK6Report()">
+                    🔥 加载 K6 API 压力测试报告
+                </button>
+                <button class="btn-secondary" onclick="clearReports()">🗑️ 清除数据</button>
+            </div>
+        </div>
+
+        <div id="statsContainer" style="display: none;">
+            <div class="stat-grid" id="statGrid"></div>
+        </div>
+
+        <div id="chartsContainer" style="display: none;">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📈 页面加载时间分布</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="pageLoadChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>⚡ 消息响应时间分布</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>✅ 成功率趋势</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="successRateChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>📊 时间戳分布</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="detailsContainer" style="display: none;">
+            <div class="details-table">
+                <h3>📋 详细数据</h3>
+                <table id="detailsTable">
+                    <thead>
+                        <tr>
+                            <th>用户 ID</th>
+                            <th>状态</th>
+                            <th>页面加载 (ms)</th>
+                            <th>交互就绪 (ms)</th>
+                            <th>消息响应 (ms)</th>
+                            <th>总耗时 (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="loadingContainer" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>⏳ 正在加载测试报告...</p>
+        </div>
+    </div>
+
+    <script>
+        let playwrightData = null
+        let k6Data = null
+        let charts = {}
+
+        async function loadPlaywrightReport() {
+            try {
+                showLoading(true)
+                const response = await fetch('playwright-report.json')
+                if (!response.ok) {
+                    throw new Error('无法加载 Playwright 报告，请确保执行过 UI 测试')
+                }
+                playwrightData = await response.json()
+                displayReport('playwright')
+                showLoading(false)
+            } catch (error) {
+                alert('错误: ' + error.message)
+                showLoading(false)
+            }
+        }
+
+        async function loadK6Report() {
+            alert('提示: k6 测试报告需要手动、导出。\n当前仅支持展示 Playwright 报告。')
+        }
+
+        function displayReport(type) {
+            const data = playwrightData
+
+            if (!data) return
+
+            // 显示统计卡片
+            const statGrid = document.getElementById('statGrid')
+            statGrid.innerHTML = `
+          <div class="stat-card success">
+            <h3>成功率</h3>
+            <div class="value">${data.summary.successRate}</div>
+          </div>
+          <div class="stat-card">
+            <h3>总用户数</h3>
+            <div class="value">${data.summary.totalUsers}</div>
+          </div>
+          <div class="stat-card success">
+            <h3>成功用户</h3>
+            <div class="value">${data.summary.successCount}</div>
+          </div>
+          <div class="stat-card error">
+            <h3>失败用户</h3>
+            <div class="value">${data.summary.failureCount}</div>
+          </div>
+          <div class="stat-card">
+            <h3>总耗时</h3>
+            <div class="value">${data.summary.totalDurationSec}</div>
+            <div class="unit">s</div>
+          </div>
+          <div class="stat-card warning">
+            <h3>平均页面加载</h3>
+            <div class="value">${data.metrics.pageLoadTime.avgMs}</div>
+            <div class="unit">ms</div>
+          </div>
+          <div class="stat-card warning">
+            <h3>平均响应时间</h3>
+            <div class="value">${data.metrics.messageResponseTime.avgMs}</div>
+            <div class="unit">ms</div>
+          </div>
+          <div class="stat-card">
+            <h3>P95 响应时间</h3>
+            <div class="value">${data.metrics.messageResponseTime.p95Ms}</div>
+            <div class="unit">ms</div>
+          </div>
+        `
+            document.getElementById('statsContainer').style.display = 'block'
+
+            // 显示图表
+            renderCharts(data)
+            document.getElementById('chartsContainer').style.display = 'block'
+
+            // 显示详细表格
+            renderDetailsTable(data)
+            document.getElementById('detailsContainer').style.display = 'block'
+
+            // 更新最后更新时间
+            document.getElementById('lastUpdate').textContent =
+                `最后更新: ${new Date().toLocaleString()}`
+        }
+
+        function renderCharts(data) {
+            // 销毁旧的图表
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy()
+            })
+            charts = {}
+
+            // 页面加载时间分布
+            const pageLoadCtx = document.getElementById('pageLoadChart').getContext('2d')
+            charts.pageLoad = new Chart(pageLoadCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['平均', '最小', '最大', 'P95', 'P99'],
+                    datasets: [
+                        {
+                            label: '页面加载时间 (ms)',
+                            data: [
+                                data.metrics.pageLoadTime.avgMs,
+                                data.metrics.pageLoadTime.minMs,
+                                data.metrics.pageLoadTime.maxMs,
+                                data.metrics.pageLoadTime.p95Ms,
+                                data.metrics.pageLoadTime.p99Ms,
+                            ],
+                            backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe'],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            })
+
+            // 消息响应时间分布
+            const responseCtx = document.getElementById('responseTimeChart').getContext('2d')
+            charts.response = new Chart(responseCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['平均', '最小', '最大', 'P95', 'P99'],
+                    datasets: [
+                        {
+                            label: '消息响应时间 (ms)',
+                            data: [
+                                data.metrics.messageResponseTime.avgMs,
+                                data.metrics.messageResponseTime.minMs,
+                                data.metrics.messageResponseTime.maxMs,
+                                data.metrics.messageResponseTime.p95Ms,
+                                data.metrics.messageResponseTime.p99Ms,
+                            ],
+                            backgroundColor: ['#fa709a', '#fee140', '#30cfd0', '#330867', '#ff0000'],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            })
+
+            // 成功率趋势
+            const successCtx = document.getElementById('successRateChart').getContext('2d')
+            charts.success = new Chart(successCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['成功', '失败'],
+                    datasets: [
+                        {
+                            data: [data.summary.successCount, data.summary.failureCount],
+                            backgroundColor: ['#84fab0', '#fa709a'],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                    },
+                },
+            })
+
+            // 时间戳分布（直方图）
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d')
+            const timelineBuckets = createTimelineBuckets(data.details)
+            charts.timeline = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: timelineBuckets.labels,
+                    datasets: [
+                        {
+                            label: '完成用户数',
+                            data: timelineBuckets.data,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            })
+        }
+
+        function createTimelineBuckets(details) {
+            if (!details || details.length === 0) {
+                return { labels: [], data: [] }
+            }
+
+            const bucketSize = 5000 // 5秒一个桶
+            const buckets = {}
+
+            details.forEach(d => {
+                const bucket = Math.floor(d.duration / bucketSize) * bucketSize
+                buckets[bucket] = (buckets[bucket] || 0) + 1
+            })
+
+            const sortedBuckets = Object.entries(buckets).sort((a, b) => Number(a[0]) - Number(b[0]))
+
+            return {
+                labels: sortedBuckets.map(([b]) => `${Number(b) / 1000}s`),
+                data: sortedBuckets.map(([, count]) => count),
+            }
+        }
+
+        function renderDetailsTable(data) {
+            const tbody = document.getElementById('tableBody')
+            tbody.innerHTML = ''
+
+            data.details.forEach((detail, index) => {
+                const row = `
+            <tr>
+              <td>用户 ${index + 1}</td>
+              <td>
+                <span class="status-badge ${detail.success ? 'success' : 'error'}">
+                  ${detail.success ? '✓ 成功' : '✗ 失败'}
+                </span>
+              </td>
+              <td>${detail.pageLoadTime}ms</td>
+              <td>${detail.firstInteractionTime}ms</td>
+              <td>${detail.messageResponseTime}ms</td>
+              <td>${detail.duration}ms</td>
+            </tr>
+          `
+                tbody.innerHTML += row
+            })
+        }
+
+        function clearReports() {
+            if (confirm('确定要清除所有数据吗？')) {
+                playwrightData = null
+                k6Data = null
+                document.getElementById('statsContainer').style.display = 'none'
+                document.getElementById('chartsContainer').style.display = 'none'
+                document.getElementById('detailsContainer').style.display = 'none'
+                document.getElementById('lastUpdate').textContent = '数据已清除'
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingContainer').style.display = show ? 'block' : 'none'
+        }
+
+        // 页面加载时自动加载报告
+        window.addEventListener('load', () => {
+            // 尝试自动加载最新报告
+            loadPlaywrightReport().catch(() => {
+                console.log('无自动加载报告')
+            })
+        })
+    </script>
+</body>
+
+</html>
