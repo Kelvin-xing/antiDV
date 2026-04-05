@@ -12,12 +12,31 @@ interface FeedbackEntry {
     updatedAt: number
 }
 
+interface WorkflowNode {
+    node_id: string
+    node_type: string
+    title: string
+    status: string
+    inputs?: any
+    outputs?: any
+    process_data?: any
+    elapsed_time?: number
+    error?: string
+    execution_metadata?: {
+        total_tokens?: number
+        total_price?: number
+        currency?: string
+    }
+}
+
 interface QAPair {
     question: string
     answer: string
     feedback?: { rating: 'like' | 'dislike' | null }
     userReview?: { score: number; comment: string }
     workflowSteps?: string
+    workflowStatus?: string
+    workflowNodes?: WorkflowNode[]
 }
 
 const SCORE_LABELS: Record<number, string> = {
@@ -48,13 +67,16 @@ function buildQAPairs(chatList: any[]): QAPair[] {
         if (item.isOpeningStatement) continue
         if (!item.isAnswer && i + 1 < chatList.length && chatList[i + 1].isAnswer) {
             const answer = chatList[i + 1]
+            const tracing = answer.workflowProcess?.tracing || []
             pairs.push({
                 question: item.content,
                 answer: answer.content,
                 feedback: answer.feedback ?? undefined,
                 userReview: answer.userReview,
-                workflowSteps: answer.workflowProcess?.tracing
-                    ?.map((t: any) => t.title ?? t.node_type).join(' → '),
+                workflowSteps: tracing
+                    .map((t: any) => t.title ?? t.node_type).join(' → ') || undefined,
+                workflowStatus: answer.workflowProcess?.status,
+                workflowNodes: tracing.length > 0 ? tracing : undefined,
             })
         }
     }
@@ -64,6 +86,169 @@ function buildQAPairs(chatList: any[]): QAPair[] {
 function shortHash(hash: string) {
     if (!hash || hash === 'anonymous') return '匿名用户'
     return hash.length > 8 ? hash.slice(0, 8) + '…' : hash
+}
+
+/* ────────────────────── Workflow Detail ────────────────────── */
+
+const NODE_STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+    succeeded: { bg: '#ECFDF5', text: '#059669', label: '成功' },
+    failed: { bg: '#FEF2F2', text: '#DC2626', label: '失败' },
+    running: { bg: '#EFF6FF', text: '#2563EB', label: '运行中' },
+}
+
+const NODE_TYPE_LABELS: Record<string, string> = {
+    start: '开始',
+    end: '结束',
+    answer: '回答',
+    llm: 'LLM',
+    'knowledge-retrieval': '知识检索',
+    'question-classifier': '问题分类',
+    'if-else': '条件分支',
+    code: '代码',
+    'template-transform': '模板转换',
+    'http-request': 'HTTP 请求',
+    'variable-assigner': '变量赋值',
+    tool: '工具',
+}
+
+function formatJson(obj: any): string {
+    if (obj === undefined || obj === null) return '—'
+    if (typeof obj === 'string') return obj
+    try {
+        return JSON.stringify(obj, null, 2)
+    } catch {
+        return String(obj)
+    }
+}
+
+function WorkflowDetail({ nodes, status }: { nodes: WorkflowNode[]; status?: string }) {
+    const [expanded, setExpanded] = useState(false)
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+
+    const toggleNode = (nodeId: string) => {
+        setExpandedNodes(prev => {
+            const next = new Set(prev)
+            if (next.has(nodeId)) next.delete(nodeId)
+            else next.add(nodeId)
+            return next
+        })
+    }
+
+    const totalTime = nodes.reduce((s, n) => s + (n.elapsed_time || 0), 0)
+    const totalTokens = nodes.reduce((s, n) => s + (n.execution_metadata?.total_tokens || 0), 0)
+
+    return (
+        <div className="mt-3 rounded-lg border" style={{ borderColor: '#E6DDD5' }}>
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium hover:bg-gray-50 transition-colors rounded-lg"
+                style={{ color: '#8F7E6E' }}
+            >
+                <span className="flex items-center gap-2">
+                    <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                        fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                    ⚙️ 工作流详情（{nodes.length} 个节点）
+                </span>
+                <span className="flex items-center gap-3">
+                    {totalTokens > 0 && <span>{totalTokens} tokens</span>}
+                    <span>{totalTime.toFixed(2)}s</span>
+                    {status && (
+                        <span className="px-1.5 py-0.5 rounded text-xs"
+                            style={{
+                                backgroundColor: NODE_STATUS_STYLES[status]?.bg || '#F3F4F6',
+                                color: NODE_STATUS_STYLES[status]?.text || '#6B7280',
+                            }}>
+                            {NODE_STATUS_STYLES[status]?.label || status}
+                        </span>
+                    )}
+                </span>
+            </button>
+
+            {expanded && (
+                <div className="border-t" style={{ borderColor: '#E6DDD5' }}>
+                    {nodes.map((node, i) => {
+                        const isOpen = expandedNodes.has(node.node_id)
+                        const statusStyle = NODE_STATUS_STYLES[node.status] || { bg: '#F3F4F6', text: '#6B7280', label: node.status }
+                        return (
+                            <div key={node.node_id + '-' + i} className="border-b last:border-b-0" style={{ borderColor: '#F0EBE5' }}>
+                                <button
+                                    onClick={() => toggleNode(node.node_id)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors"
+                                >
+                                    <svg className={`w-3 h-3 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                                        style={{ color: '#B3A597' }}
+                                        fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                    </svg>
+                                    <span className="font-medium" style={{ color: '#3D3028' }}>{node.title}</span>
+                                    <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: '#F5F0EB', color: '#8F7E6E' }}>
+                                        {NODE_TYPE_LABELS[node.node_type] || node.node_type}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}>
+                                        {statusStyle.label}
+                                    </span>
+                                    {node.elapsed_time !== undefined && (
+                                        <span style={{ color: '#B3A597' }}>{node.elapsed_time.toFixed(2)}s</span>
+                                    )}
+                                    {node.execution_metadata?.total_tokens ? (
+                                        <span style={{ color: '#B3A597' }}>{node.execution_metadata.total_tokens} tok</span>
+                                    ) : null}
+                                    {node.error && (
+                                        <span className="text-red-500 truncate" style={{ maxWidth: '200px' }}>{node.error}</span>
+                                    )}
+                                </button>
+
+                                {isOpen && (
+                                    <div className="px-4 pb-3 space-y-2" style={{ backgroundColor: '#FAFAF8' }}>
+                                        {node.inputs !== undefined && node.inputs !== null && (
+                                            <div>
+                                                <div className="text-xs font-medium mb-1" style={{ color: '#8F7E6E' }}>输入 (Inputs)</div>
+                                                <pre className="text-xs p-2 rounded overflow-x-auto" style={{ backgroundColor: '#F5F0EB', color: '#4A4238', maxHeight: '200px' }}>
+                                                    {formatJson(node.inputs)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {node.process_data !== undefined && node.process_data !== null && (
+                                            <div>
+                                                <div className="text-xs font-medium mb-1" style={{ color: '#8F7E6E' }}>处理数据 (Process Data)</div>
+                                                <pre className="text-xs p-2 rounded overflow-x-auto" style={{ backgroundColor: '#F5F0EB', color: '#4A4238', maxHeight: '200px' }}>
+                                                    {formatJson(node.process_data)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {node.outputs !== undefined && node.outputs !== null && (
+                                            <div>
+                                                <div className="text-xs font-medium mb-1" style={{ color: '#8F7E6E' }}>输出 (Outputs)</div>
+                                                <pre className="text-xs p-2 rounded overflow-x-auto" style={{ backgroundColor: '#EFF8F4', color: '#4A4238', maxHeight: '200px' }}>
+                                                    {formatJson(node.outputs)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {node.error && (
+                                            <div>
+                                                <div className="text-xs font-medium mb-1 text-red-600">错误信息</div>
+                                                <pre className="text-xs p-2 rounded bg-red-50 text-red-700 overflow-x-auto" style={{ maxHeight: '120px' }}>
+                                                    {node.error}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {node.execution_metadata && (
+                                            <div className="flex gap-4 text-xs" style={{ color: '#8F7E6E' }}>
+                                                {node.execution_metadata.total_tokens ? <span>Tokens: {node.execution_metadata.total_tokens}</span> : null}
+                                                {node.execution_metadata.total_price ? <span>费用: {node.execution_metadata.total_price} {node.execution_metadata.currency || ''}</span> : null}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
 }
 
 /* ────────────────────── Main Page ────────────────────── */
@@ -285,6 +470,9 @@ export default function FeedbackAdminPage() {
                                                         <div className="mt-2 text-xs px-2 py-1 rounded-md inline-block" style={{ backgroundColor: '#F5F0EB', color: '#8F7E6E' }}>
                                                             🔗 {pair.workflowSteps}
                                                         </div>
+                                                    )}
+                                                    {pair.workflowNodes && pair.workflowNodes.length > 0 && (
+                                                        <WorkflowDetail nodes={pair.workflowNodes} status={pair.workflowStatus} />
                                                     )}
                                                 </div>
                                             </div>

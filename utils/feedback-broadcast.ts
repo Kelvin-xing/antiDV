@@ -33,6 +33,21 @@ function safeChatList(chatList: ChatItem[]): any[] {
             userReview: (item as any).userReview,
             isOpeningStatement: (item as any).isOpeningStatement,
             message_files: item.message_files,
+            workflowProcess: (item as any).workflowProcess ? {
+                status: (item as any).workflowProcess.status,
+                tracing: ((item as any).workflowProcess.tracing || []).map((node: any) => ({
+                    node_id: node.node_id,
+                    node_type: node.node_type,
+                    title: node.title,
+                    status: node.status,
+                    inputs: node.inputs,
+                    outputs: node.outputs,
+                    process_data: node.process_data,
+                    elapsed_time: node.elapsed_time,
+                    error: node.error,
+                    execution_metadata: node.execution_metadata,
+                })),
+            } : undefined,
         }))
     }
 }
