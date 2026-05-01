@@ -9,6 +9,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://anti-dv.vercel.app'),
+  alternates: {
+    canonical: 'https://anti-dv.vercel.app',
+  },
   title: {
     default: '小安 — 反家暴AI支持助手',
     template: '%s — 小安',
@@ -41,6 +44,19 @@ const websiteJsonLd = {
   inLanguage: 'zh-Hans',
 }
 
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: '小安反家暴助手',
+  url: 'https://anti-dv.vercel.app',
+  description: '专注于反家庭暴力的AI支持助手',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'crisis support',
+    availableLanguage: 'zh-Hans',
+  },
+}
+
 const LocaleLayout = async ({
   children,
 }: {
@@ -61,6 +77,10 @@ const LocaleLayout = async ({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
       </head>
       <body className="h-full" style={{ backgroundColor: '#FBF8F4' }}>

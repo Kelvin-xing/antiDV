@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
     title: '心理资源支持库',
+    alternates: {
+        canonical: 'https://anti-dv.vercel.app/psych-resources',
+    },
     description:
         '家暴防治教育资源精选：创伤疗愈书籍、心理健康文章、安全规划指南、法律知识与权利意识，帮助你了解、理解并走出困境。',
     openGraph: {

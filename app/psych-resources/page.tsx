@@ -2,6 +2,8 @@ import type { FC } from 'react'
 import Link from 'next/link'
 import { psychResources } from './data'
 
+export const revalidate = 86400
+
 const focusStyle = `
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

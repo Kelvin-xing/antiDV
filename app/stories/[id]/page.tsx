@@ -3,6 +3,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { stories } from '../data'
 
+export const dynamic = 'force-static'
+
+export function generateStaticParams() {
+    return stories.map(s => ({ id: s.id }))
+}
+
 interface Props {
     params: Promise<{ id: string }>
 }

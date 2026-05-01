@@ -38,3 +38,16 @@ jobs:
         env:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only lint files changed in the push/PR to reduce scope
+          VALIDATE_ALL_CODEBASE: false
+          # Enable only the linters relevant to this Next.js/TypeScript project
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_CSS: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          # Point ESLint to the project's own config
+          ESLINT_CONFIG_FILE: eslint.config.mjs
+          # Disable the step summary to avoid the 1024k upload limit
+          SAVE_SUPER_LINTER_SUMMARY: false

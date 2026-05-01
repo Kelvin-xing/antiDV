@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: {
     absolute: '小安 — 反家暴AI支持助手',
   },
+  alternates: {
+    canonical: 'https://anti-dv.vercel.app/',
+  },
   description:
     '小安是专注于反家庭暴力的AI支持助手，提供安全、保密的情感支持，24小时在线。并汇集全国庇护所、法律援助、心理咨询等资源，帮助你找到下一步。',
   openGraph: {
