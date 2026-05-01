@@ -1,8 +1,23 @@
+import type { Metadata } from 'next'
 import type { FC } from 'react'
 import React from 'react'
 import Link from 'next/link'
 import ContactForm from '@/app/components/contact-form'
 import ScrollReveal from '@/app/components/scroll-reveal'
+
+export const metadata: Metadata = {
+  title: {
+    absolute: '小安 — 反家暴AI支持助手',
+  },
+  description:
+    '小安是专注于反家庭暴力的AI支持助手，提供安全、保密的情感支持，24小时在线。并汇集全国庇护所、法律援助、心理咨询等资源，帮助你找到下一步。',
+  openGraph: {
+    title: '小安 — 反家暴AI支持助手',
+    description:
+      '安全 · 保密 · 随时在线。专注于反家庭暴力的AI支持助手，提供情感支持与资源导航。',
+    url: 'https://anti-dv.vercel.app/',
+  },
+}
 
 /* ── Inline SVG Icons (stroke 1.5, 20×20, no external deps) ── */
 const IconChat = () => (
@@ -152,6 +167,19 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 `
 
 const LandingPage: FC = () => {
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
+  }
+
   return (
     <div
       style={{
@@ -161,6 +189,10 @@ const LandingPage: FC = () => {
         color: '#3D3028',
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <style dangerouslySetInnerHTML={{ __html: reducedMotionStyle }} />
 
       {/* ─── Hero ─────────────────────────────────── */}
