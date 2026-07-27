@@ -1,28 +1,48 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const ESCAPE_URL = 'https://www.weather.com.cn/'
-const USER_HASH_KEY = 'xiaoAn_user_hash'
+const QUICK_EXIT_SESSION_KEY = 'xiaoan_quick_exit'
+
+function isQuickExitLocked() {
+  try {
+    return sessionStorage.getItem(QUICK_EXIT_SESSION_KEY) === '1'
+  }
+  catch (error) {
+    console.warn('Unable to read the quick-exit lock', error)
+    return false
+  }
+}
+
+function redirectIfQuickExitLocked() {
+  if (!isQuickExitLocked()) {
+    return
+  }
+
+  document.documentElement.style.visibility = 'hidden'
+  window.location.replace(ESCAPE_URL)
+}
 
 export function quickEscape() {
+  void fetch('/v1/conversations/current', {
+    method: 'DELETE',
+    credentials: 'include',
+    keepalive: true,
+    cache: 'no-store',
+  }).catch(error => console.warn('Unable to delete the current conversation', error))
   try {
-    const savedHash = localStorage.getItem(USER_HASH_KEY)
-    sessionStorage.clear()
-    localStorage.clear()
-    if (savedHash) localStorage.setItem(USER_HASH_KEY, savedHash)
+    sessionStorage.setItem(QUICK_EXIT_SESSION_KEY, '1')
   }
-  catch { }
-  try {
-    for (let i = 0; i < 5; i++)
-      window.history.pushState(null, '', window.location.href)
+  catch (error) {
+    console.warn('Unable to persist the quick-exit lock', error)
   }
-  catch { }
+  document.documentElement.style.visibility = 'hidden'
   window.location.replace(ESCAPE_URL)
 }
 
 export default function QuickExit() {
   // null = use default CSS position (top-right); once dragged, track in px
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [pos, setPos] = useState<{ x: number, y: number } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const dragRef = useRef<{
     startX: number
@@ -34,7 +54,13 @@ export default function QuickExit() {
   const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') quickEscape() }
+    redirectIfQuickExitLocked()
+    window.addEventListener('pageshow', redirectIfQuickExitLocked)
+    return () => window.removeEventListener('pageshow', redirectIfQuickExitLocked)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { quickEscape() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
@@ -49,7 +75,7 @@ export default function QuickExit() {
 
   const startDrag = (clientX: number, clientY: number) => {
     const btn = btnRef.current
-    if (!btn) return
+    if (!btn) { return }
     const rect = btn.getBoundingClientRect()
     dragRef.current = { startX: clientX, startY: clientY, btnX: rect.left, btnY: rect.top, moved: false }
   }
@@ -58,10 +84,10 @@ export default function QuickExit() {
     e.preventDefault()
     startDrag(e.clientX, e.clientY)
     const onMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
+      if (!dragRef.current) { return }
       const dx = ev.clientX - dragRef.current.startX
       const dy = ev.clientY - dragRef.current.startY
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) { dragRef.current.moved = true }
       if (dragRef.current.moved) {
         const x = Math.max(0, Math.min(window.innerWidth - 120, dragRef.current.btnX + dx))
         const y = Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.btnY + dy))
@@ -80,11 +106,11 @@ export default function QuickExit() {
     const t = e.touches[0]
     startDrag(t.clientX, t.clientY)
     const onMove = (ev: TouchEvent) => {
-      if (!dragRef.current) return
+      if (!dragRef.current) { return }
       const touch = ev.touches[0]
       const dx = touch.clientX - dragRef.current.startX
       const dy = touch.clientY - dragRef.current.startY
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) { dragRef.current.moved = true }
       if (dragRef.current.moved) {
         ev.preventDefault()
         const x = Math.max(0, Math.min(window.innerWidth - 120, dragRef.current.btnX + dx))
@@ -101,7 +127,7 @@ export default function QuickExit() {
   }
 
   const handleClick = () => {
-    if (dragRef.current?.moved) return
+    if (dragRef.current?.moved) { return }
     quickEscape()
   }
 
@@ -136,7 +162,7 @@ export default function QuickExit() {
         boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
         letterSpacing: '0.03em',
         transition: 'background-color 0.15s',
-        fontFamily: "'Noto Sans SC', sans-serif",
+        fontFamily: '\'Noto Sans SC\', sans-serif',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',

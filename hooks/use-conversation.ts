@@ -3,27 +3,17 @@ import produce from 'immer'
 import { useGetState } from 'ahooks'
 import type { ConversationItem } from '@/types/app'
 
-const storageConversationIdKey = 'conversationIdInfo'
-
 type ConversationInfoType = Omit<ConversationItem, 'inputs' | 'id'>
 function useConversation() {
   const [conversationList, setConversationList] = useState<ConversationItem[]>([])
   const [currConversationId, doSetCurrConversationId, getCurrConversationId] = useGetState<string>('-1')
-  // when set conversation id, we do not have set appId
-  const setCurrConversationId = (id: string, appId: string, isSetToLocalStroge = true, newConversationName = '') => {
+  const setCurrConversationId = (
+    id: string,
+    _appId?: string,
+    _persist?: boolean,
+    _newConversationName?: string,
+  ) => {
     doSetCurrConversationId(id)
-    if (isSetToLocalStroge && id !== '-1') {
-      // conversationIdInfo: {[appId1]: conversationId1, [appId2]: conversationId2}
-      const conversationIdInfo = globalThis.localStorage?.getItem(storageConversationIdKey) ? JSON.parse(globalThis.localStorage?.getItem(storageConversationIdKey) || '') : {}
-      conversationIdInfo[appId] = id
-      globalThis.localStorage?.setItem(storageConversationIdKey, JSON.stringify(conversationIdInfo))
-    }
-  }
-
-  const getConversationIdFromStorage = (appId: string) => {
-    const conversationIdInfo = globalThis.localStorage?.getItem(storageConversationIdKey) ? JSON.parse(globalThis.localStorage?.getItem(storageConversationIdKey) || '') : {}
-    const id = conversationIdInfo[appId]
-    return id
   }
 
   const isNewConversation = currConversationId === '-1'
@@ -52,7 +42,6 @@ function useConversation() {
     currConversationId,
     getCurrConversationId,
     setCurrConversationId,
-    getConversationIdFromStorage,
     isNewConversation,
     currInputs,
     newConversationInputs,

@@ -1,20 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    const backendOrigin = process.env.XIAOAN_API_ORIGIN || 'http://127.0.0.1:8000'
+    return [
+      {
+        source: '/v1/:path*',
+        destination: `${backendOrigin}/v1/:path*`,
+      },
+    ]
+  },
   productionBrowserSourceMaps: false, // enable browser source map generation during the production build
   // Configure pageExtensions to include md and mdx
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
   experimental: {
     // appDir: true,
-  },
-  // fix all before production. Now it slow the develop speed.
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // https://nextjs.org/docs/api-reference/next.config.js/ignoring-typescript-errors
-    ignoreBuildErrors: true,
   },
   output: 'standalone',
 
@@ -37,13 +36,6 @@ const nextConfig = {
           },
         ],
       },
-      // Tell crawlers not to index the admin feedback panel
-      {
-        source: '/feedback(.*)',
-        headers: [
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-        ],
-      },
       // Tell crawlers not to index ephemeral chat sessions
       {
         source: '/chat(.*)',
@@ -56,4 +48,3 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
-

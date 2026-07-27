@@ -1,446 +1,206 @@
 import { API_PREFIX } from '@/config'
-import Toast from '@/app/components/base/toast'
-import type { AnnotationReply, MessageEnd, MessageReplace, ThoughtItem } from '@/app/components/chat/type'
-import type { VisionFile } from '@/types/app'
 
-const TIME_OUT = 100000
+export class ApiError extends Error {
+  status: number
 
-const ContentType = {
-  json: 'application/json',
-  stream: 'text/event-stream',
-  form: 'application/x-www-form-urlencoded; charset=UTF-8',
-  download: 'application/octet-stream', // for download
-}
-
-const baseOptions = {
-  method: 'GET',
-  mode: 'cors',
-  credentials: 'include', // always send cookies、HTTP Basic authentication.
-  headers: new Headers({
-    'Content-Type': ContentType.json,
-  }),
-  redirect: 'follow',
-}
-
-export interface WorkflowStartedResponse {
-  task_id: string
-  workflow_run_id: string
-  event: string
-  data: {
-    id: string
-    workflow_id: string
-    sequence_number: number
-    created_at: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
   }
 }
 
-export interface WorkflowFinishedResponse {
-  task_id: string
-  workflow_run_id: string
+interface ApiRequestInit extends RequestInit {
+  timeoutMs?: number
+}
+
+export interface ServerSentEvent {
   event: string
-  data: {
-    id: string
-    workflow_id: string
-    status: string
-    outputs: any
-    error: string
-    elapsed_time: number
-    total_tokens: number
-    total_steps: number
-    created_at: number
-    finished_at: number
-  }
+  data: string
+  id: string
 }
 
-export interface NodeStartedResponse {
-  task_id: string
-  workflow_run_id: string
-  event: string
-  data: {
-    id: string
-    node_id: string
-    node_type: string
-    index: number
-    predecessor_node_id?: string
-    inputs: any
-    created_at: number
-    extras?: any
-  }
-}
+export async function apiRequest<T>(
+  path: string,
+  { timeoutMs = 100000, signal, ...init }: ApiRequestInit = {},
+): Promise<T> {
+  const requestController = new AbortController()
+  const abortRequest = () => requestController.abort()
+  signal?.addEventListener('abort', abortRequest, { once: true })
+  let timedOut = false
+  const timeout = window.setTimeout(() => {
+    timedOut = true
+    abortRequest()
+  }, timeoutMs)
 
-export interface NodeFinishedResponse {
-  task_id: string
-  workflow_run_id: string
-  event: string
-  data: {
-    id: string
-    node_id: string
-    node_type: string
-    index: number
-    predecessor_node_id?: string
-    inputs: any
-    process_data: any
-    outputs: any
-    status: string
-    error: string
-    elapsed_time: number
-    execution_metadata: {
-      total_tokens: number
-      total_price: number
-      currency: string
-    }
-    created_at: number
-  }
-}
+  try {
+    const response = await fetch(`${API_PREFIX}${path}`, {
+      ...init,
+      signal: requestController.signal,
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        ...init.headers,
+      },
+    })
 
-export interface IOnDataMoreInfo {
-  conversationId?: string
-  taskId?: string
-  messageId: string
-  errorMessage?: string
-  errorCode?: string
-}
-
-export type IOnData = (message: string, isFirstMessage: boolean, moreInfo: IOnDataMoreInfo) => void
-export type IOnThought = (though: ThoughtItem) => void
-export type IOnFile = (file: VisionFile) => void
-export type IOnMessageEnd = (messageEnd: MessageEnd) => void
-export type IOnMessageReplace = (messageReplace: MessageReplace) => void
-export type IOnAnnotationReply = (messageReplace: AnnotationReply) => void
-export type IOnCompleted = (hasError?: boolean) => void
-export type IOnError = (msg: string, code?: string) => void
-export type IOnWorkflowStarted = (workflowStarted: WorkflowStartedResponse) => void
-export type IOnWorkflowFinished = (workflowFinished: WorkflowFinishedResponse) => void
-export type IOnNodeStarted = (nodeStarted: NodeStartedResponse) => void
-export type IOnNodeFinished = (nodeFinished: NodeFinishedResponse) => void
-
-interface IOtherOptions {
-  isPublicAPI?: boolean
-  bodyStringify?: boolean
-  needAllResponseContent?: boolean
-  deleteContentType?: boolean
-  onData?: IOnData // for stream
-  onThought?: IOnThought
-  onFile?: IOnFile
-  onMessageEnd?: IOnMessageEnd
-  onMessageReplace?: IOnMessageReplace
-  onError?: IOnError
-  onCompleted?: IOnCompleted // for stream
-  getAbortController?: (abortController: AbortController) => void
-  onWorkflowStarted?: IOnWorkflowStarted
-  onWorkflowFinished?: IOnWorkflowFinished
-  onNodeStarted?: IOnNodeStarted
-  onNodeFinished?: IOnNodeFinished
-}
-
-function unicodeToChar(text: string) {
-  return text.replace(/\\u[0-9a-f]{4}/g, (_match, p1) => {
-    return String.fromCharCode(parseInt(p1, 16))
-  })
-}
-
-const handleStream = (
-  response: Response,
-  onData: IOnData,
-  onCompleted?: IOnCompleted,
-  onThought?: IOnThought,
-  onMessageEnd?: IOnMessageEnd,
-  onMessageReplace?: IOnMessageReplace,
-  onFile?: IOnFile,
-  onWorkflowStarted?: IOnWorkflowStarted,
-  onWorkflowFinished?: IOnWorkflowFinished,
-  onNodeStarted?: IOnNodeStarted,
-  onNodeFinished?: IOnNodeFinished,
-) => {
-  if (!response.ok) { throw new Error('Network response was not ok') }
-
-  const reader = response.body?.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  let bufferObj: Record<string, any>
-  let isFirstMessage = true
-  function read() {
-    let hasError = false
-    reader?.read().then((result: any) => {
-      if (result.done) {
-        onCompleted && onCompleted()
-        return
-      }
-      buffer += decoder.decode(result.value, { stream: true })
-      const lines = buffer.split('\n')
+    if (!response.ok) {
+      let message = `请求失败 (${response.status})`
       try {
-        lines.forEach((message) => {
-          if (message.startsWith('data: ')) { // check if it starts with data:
-            try {
-              bufferObj = JSON.parse(message.substring(6)) as Record<string, any>// remove data: and parse as json
-            }
-            catch (e) {
-              // mute handle message cut off
-              onData('', isFirstMessage, {
-                conversationId: bufferObj?.conversation_id,
-                messageId: bufferObj?.message_id,
-              })
-              return
-            }
-            if (bufferObj.status === 400 || !bufferObj.event) {
-              onData('', false, {
-                conversationId: undefined,
-                messageId: '',
-                errorMessage: bufferObj?.message,
-                errorCode: bufferObj?.code,
-              })
-              hasError = true
-              onCompleted?.(true)
-              return
-            }
-            if (bufferObj.event === 'message' || bufferObj.event === 'agent_message') {
-              // can not use format here. Because message is splited.
-              onData(unicodeToChar(bufferObj.answer), isFirstMessage, {
-                conversationId: bufferObj.conversation_id,
-                taskId: bufferObj.task_id,
-                messageId: bufferObj.id,
-              })
-              isFirstMessage = false
-            }
-            else if (bufferObj.event === 'agent_thought') {
-              onThought?.(bufferObj as ThoughtItem)
-            }
-            else if (bufferObj.event === 'message_file') {
-              onFile?.(bufferObj as VisionFile)
-            }
-            else if (bufferObj.event === 'message_end') {
-              onMessageEnd?.(bufferObj as MessageEnd)
-            }
-            else if (bufferObj.event === 'message_replace') {
-              onMessageReplace?.(bufferObj as MessageReplace)
-            }
-            else if (bufferObj.event === 'workflow_started') {
-              onWorkflowStarted?.(bufferObj as WorkflowStartedResponse)
-            }
-            else if (bufferObj.event === 'workflow_finished') {
-              onWorkflowFinished?.(bufferObj as WorkflowFinishedResponse)
-            }
-            else if (bufferObj.event === 'node_started') {
-              onNodeStarted?.(bufferObj as NodeStartedResponse)
-            }
-            else if (bufferObj.event === 'node_finished') {
-              onNodeFinished?.(bufferObj as NodeFinishedResponse)
-            }
-          }
-        })
-        buffer = lines[lines.length - 1]
-      }
-      catch (e) {
-        onData('', false, {
-          conversationId: undefined,
-          messageId: '',
-          errorMessage: `${e}`,
-        })
-        hasError = true
-        onCompleted?.(true)
-        return
-      }
-      if (!hasError) { read() }
-    })
-  }
-  read()
-}
-
-const getUserHash = (): string | null => {
-  if (typeof window === 'undefined') { return null }
-  return window.localStorage.getItem('xiaoAn_user_hash')
-}
-
-const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: IOtherOptions) => {
-  const options = Object.assign({}, baseOptions, fetchOptions)
-
-  const userHash = getUserHash()
-  if (userHash) {
-    if (!options.headers) { options.headers = new Headers({ 'Content-Type': ContentType.json }) }
-    options.headers.set('X-User-Hash', userHash)
-  }
-
-  const urlPrefix = API_PREFIX
-
-  let urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`
-
-  const { method, params, body } = options
-  // handle query
-  if (method === 'GET' && params) {
-    const paramsArray: string[] = []
-    Object.keys(params).forEach(key =>
-      paramsArray.push(`${key}=${encodeURIComponent(params[key])}`),
-    )
-    if (urlWithPrefix.search(/\?/) === -1) { urlWithPrefix += `?${paramsArray.join('&')}` }
-
-    else { urlWithPrefix += `&${paramsArray.join('&')}` }
-
-    delete options.params
-  }
-
-  if (body) { options.body = JSON.stringify(body) }
-
-  // Handle timeout
-  return Promise.race([
-    new Promise((resolve, reject) => {
-      setTimeout(() => {
-        reject(new Error('request timeout'))
-      }, TIME_OUT)
-    }),
-    new Promise((resolve, reject) => {
-      globalThis.fetch(urlWithPrefix, options)
-        .then((res: any) => {
-          const resClone = res.clone()
-          // Error handler
-          if (!/^(2|3)\d{2}$/.test(res.status)) {
-            try {
-              const bodyJson = res.json()
-              switch (res.status) {
-                case 401: {
-                  Toast.notify({ type: 'error', message: 'Invalid token' })
-                  return
-                }
-                default:
-                  // eslint-disable-next-line no-new
-                  new Promise(() => {
-                    bodyJson.then((data: any) => {
-                      Toast.notify({ type: 'error', message: data.message })
-                    })
-                  })
-              }
-            }
-            catch (e) {
-              Toast.notify({ type: 'error', message: `${e}` })
-            }
-
-            return Promise.reject(resClone)
-          }
-
-          // handle delete api. Delete api not return content.
-          if (res.status === 204) {
-            resolve({ result: 'success' })
-            return
-          }
-
-          // return data
-          const data = options.headers.get('Content-type') === ContentType.download ? res.blob() : res.json()
-
-          resolve(needAllResponseContent ? resClone : data)
-        })
-        .catch((err) => {
-          Toast.notify({ type: 'error', message: err })
-          reject(err)
-        })
-    }),
-  ])
-}
-
-export const upload = (fetchOptions: any): Promise<any> => {
-  const urlPrefix = API_PREFIX
-  const urlWithPrefix = `${urlPrefix}/file-upload`
-  const defaultOptions = {
-    method: 'POST',
-    url: `${urlWithPrefix}`,
-    data: {},
-  }
-  const options = {
-    ...defaultOptions,
-    ...fetchOptions,
-  }
-  return new Promise((resolve, reject) => {
-    const xhr = options.xhr
-    xhr.open(options.method, options.url)
-    for (const key in options.headers) { xhr.setRequestHeader(key, options.headers[key]) }
-
-    xhr.withCredentials = true
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) { resolve({ id: xhr.response }) }
-        else { reject(xhr) }
-      }
-    }
-    xhr.upload.onprogress = options.onprogress
-    xhr.send(options.data)
-  })
-}
-
-export const ssePost = (
-  url: string,
-  fetchOptions: any,
-  {
-    onData,
-    onCompleted,
-    onThought,
-    onFile,
-    onMessageEnd,
-    onMessageReplace,
-    onWorkflowStarted,
-    onWorkflowFinished,
-    onNodeStarted,
-    onNodeFinished,
-    onError,
-  }: IOtherOptions,
-) => {
-  const options = Object.assign({}, baseOptions, {
-    method: 'POST',
-  }, fetchOptions)
-
-  const userHash = getUserHash()
-  if (userHash) {
-    if (!options.headers) { options.headers = new Headers({ 'Content-Type': ContentType.json }) }
-    options.headers.set('X-User-Hash', userHash)
-  }
-
-  const urlPrefix = API_PREFIX
-  const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`
-
-  const { body } = options
-  if (body) { options.body = JSON.stringify(body) }
-
-  globalThis.fetch(urlWithPrefix, options)
-    .then((res: any) => {
-      if (!/^(2|3)\d{2}$/.test(res.status)) {
-        // eslint-disable-next-line no-new
-        new Promise(() => {
-          res.json().then((data: any) => {
-            Toast.notify({ type: 'error', message: data.message || 'Server Error' })
-          })
-        })
-        onError?.('Server Error')
-        return
-      }
-      return handleStream(res, (str: string, isFirstMessage: boolean, moreInfo: IOnDataMoreInfo) => {
-        if (moreInfo.errorMessage) {
-          Toast.notify({ type: 'error', message: moreInfo.errorMessage })
-          return
+        const body = await response.json()
+        if (typeof body.detail === 'string') {
+          message = body.detail
         }
-        onData?.(str, isFirstMessage, moreInfo)
-      }, () => {
-        onCompleted?.()
-      }, onThought, onMessageEnd, onMessageReplace, onFile, onWorkflowStarted, onWorkflowFinished, onNodeStarted, onNodeFinished)
-    })
-    .catch((e) => {
-      Toast.notify({ type: 'error', message: e })
-      onError?.(e)
-    })
+      }
+      catch {
+        // Keep the status-based message for non-JSON errors.
+      }
+      throw new ApiError(response.status, message)
+    }
+
+    if (response.status === 204) {
+      return undefined as T
+    }
+
+    return await response.json() as T
+  }
+  catch (error) {
+    if (
+      timedOut
+      && error instanceof DOMException
+      && error.name === 'AbortError'
+    ) {
+      throw new ApiError(408, '请求超时，请稍后重试')
+    }
+    throw error
+  }
+  finally {
+    signal?.removeEventListener('abort', abortRequest)
+    window.clearTimeout(timeout)
+  }
 }
 
-export const request = (url: string, options = {}, otherOptions?: IOtherOptions) => {
-  return baseFetch(url, options, otherOptions || {})
+function findLineEnding(
+  value: string,
+  endOfStream: boolean,
+): { index: number, length: number } | null {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === '\n')
+      { return { index, length: 1 } }
+    if (value[index] !== '\r')
+      { continue }
+    if (index === value.length - 1 && !endOfStream)
+      { return null }
+    return {
+      index,
+      length: value[index + 1] === '\n' ? 2 : 1,
+    }
+  }
+  return null
 }
 
-export const get = (url: string, options = {}, otherOptions?: IOtherOptions) => {
-  return request(url, Object.assign({}, options, { method: 'GET' }), otherOptions)
+async function consumeEventStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (event: ServerSentEvent) => void,
+  onActivity?: () => void,
+): Promise<void> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let eventName = ''
+  let eventId = ''
+  let dataLines: string[] = []
+
+  const processLine = (line: string) => {
+    if (line === '') {
+      if (dataLines.length) {
+        onEvent({
+          event: eventName || 'message',
+          data: dataLines.join('\n'),
+          id: eventId,
+        })
+      }
+      eventName = ''
+      dataLines = []
+      return
+    }
+    if (line.startsWith(':'))
+      { return }
+
+    const separatorIndex = line.indexOf(':')
+    const field = separatorIndex === -1 ? line : line.slice(0, separatorIndex)
+    let value = separatorIndex === -1 ? '' : line.slice(separatorIndex + 1)
+    if (value.startsWith(' '))
+      { value = value.slice(1) }
+
+    if (field === 'event')
+      { eventName = value }
+    else if (field === 'data')
+      { dataLines.push(value) }
+    else if (field === 'id' && !value.includes('\0'))
+      { eventId = value }
+  }
+
+  const processBuffer = (endOfStream: boolean) => {
+    while (buffer) {
+      const lineEnding = findLineEnding(buffer, endOfStream)
+      if (!lineEnding)
+        { break }
+      processLine(buffer.slice(0, lineEnding.index))
+      buffer = buffer.slice(lineEnding.index + lineEnding.length)
+    }
+    if (endOfStream && buffer) {
+      processLine(buffer)
+      buffer = ''
+    }
+  }
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done)
+        { break }
+      onActivity?.()
+      buffer += decoder.decode(value, { stream: true })
+      processBuffer(false)
+    }
+    buffer += decoder.decode()
+    processBuffer(true)
+  }
+  finally {
+    reader.releaseLock()
+  }
 }
 
-export const post = (url: string, options = {}, otherOptions?: IOtherOptions) => {
-  return request(url, Object.assign({}, options, { method: 'POST' }), otherOptions)
+export async function streamSSE(
+  path: string,
+  init: RequestInit,
+  onEvent: (event: ServerSentEvent) => void,
+  onActivity?: () => void,
+): Promise<void> {
+  const response = await fetch(`${API_PREFIX}${path}`, {
+    ...init,
+    credentials: 'include',
+    cache: 'no-store',
+    headers: {
+      Accept: 'text/event-stream',
+      ...init.headers,
+    },
+  })
+
+  if (!response.ok)
+    { throw new ApiError(response.status, `请求失败 (${response.status})`) }
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.toLowerCase().startsWith('text/event-stream'))
+    { throw new ApiError(response.status, `预期流式响应，但服务器返回了 ${contentType || '未知格式'}`) }
+  if (!response.body)
+    { throw new ApiError(response.status, '浏览器未提供流式响应内容') }
+
+  await consumeEventStream(response.body, onEvent, onActivity)
 }
 
-export const put = (url: string, options = {}, otherOptions?: IOtherOptions) => {
-  return request(url, Object.assign({}, options, { method: 'PUT' }), otherOptions)
-}
-
-export const del = (url: string, options = {}, otherOptions?: IOtherOptions) => {
-  return request(url, Object.assign({}, options, { method: 'DELETE' }), otherOptions)
+export function upload(_options?: unknown): Promise<{ id: string }> {
+  return Promise.reject(new Error('当前版本暂不支持上传附件'))
 }

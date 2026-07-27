@@ -24,7 +24,6 @@ const AppIcon: FC<AppIconProps> = ({
 }) => {
   const px = sizeMap[size] ?? 36
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/avatar.png"
       alt="小安"

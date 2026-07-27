@@ -6,6 +6,7 @@
  * npx ts-node load-test/playwright-ui-test.ts
  */
 
+import type { Browser } from 'playwright'
 import { chromium } from 'playwright'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -29,7 +30,7 @@ let successCount = 0
 let failureCount = 0
 
 async function runSingleUserTest(userId: number): Promise<TestMetrics> {
-    let browser
+    let browser: Browser | undefined
     const startTime = Date.now()
     const metrics: TestMetrics = {
         duration: 0,
@@ -43,7 +44,7 @@ async function runSingleUserTest(userId: number): Promise<TestMetrics> {
     try {
         // 启动浏览器
         browser = await chromium.launch()
-        const context = await browser.createBrowserContext()
+        const context = await browser.newContext()
         const page = await context.newPage()
 
         // 记录页面加载时间
@@ -63,28 +64,18 @@ async function runSingleUserTest(userId: number): Promise<TestMetrics> {
 
         // 发送消息
         const messageStart = Date.now()
+        const responsePromise = page.waitForResponse(response =>
+            response.url().includes('/v1/conversations/')
+            && response.url().endsWith('/responses')
+            && response.request().method() === 'POST',
+        )
         await textarea.fill(MESSAGE_TO_SEND)
         await textarea.press('Enter')
 
-        // 等待响应（监听流式数据）
-        let messageReceived = false
-        const messageListener = (message: any) => {
-            if (message.includes('data:')) {
-                messageReceived = true
-            }
-        }
-
-        page.on('response', async (response) => {
-            if (response.url().includes('chat-messages')) {
-                const text = await response.text()
-                if (text.includes('data:')) {
-                    messageReceived = true
-                }
-            }
-        })
-
-        // 等待消息响应（最多等待 30 秒）
-        await page.waitForTimeout(2000) // 等待 2 秒看是否有响应
+        // 等待完整 JSON 响应
+        const response = await responsePromise
+        const body = await response.json()
+        const messageReceived = typeof body.answer === 'string'
         metrics.messageResponseTime = Date.now() - messageStart
 
         console.log(`[用户 ${userId}] ✓ 消息已发送并接收响应 (${metrics.messageResponseTime}ms)`)
@@ -92,6 +83,8 @@ async function runSingleUserTest(userId: number): Promise<TestMetrics> {
         // 等待一段时间模拟用户阅读
         await page.waitForTimeout(1000)
 
+        if (!messageReceived)
+            { throw new Error('未收到聊天响应') }
         metrics.success = true
         successCount++
 
@@ -242,7 +235,7 @@ function generateReport(stats: any, overallDuration: number) {
     console.log(`\n📊 详细报告已保存: ${reportPath}`)
 
     // 打印简化版本
-    console.log('\n' + '='.repeat(60))
+    console.log(`\n${'='.repeat(60)}`)
     console.log('📈 压力测试结果摘要')
     console.log('='.repeat(60))
     console.log(`✅ 成功: ${stats.successCount} / ${stats.totalUsers} (${stats.successRate}%)`)

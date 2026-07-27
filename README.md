@@ -1,80 +1,82 @@
-# Conversation Web App Template
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# XiaoAn Web
 
-## Config App
-Create a file named `.env.local` in the current directory and copy the contents from `.env.example`. Setting the following content:
-```
-# APP ID: This is the unique identifier for your app. You can find it in the app's detail page URL. 
-# For example, in the URL `https://cloud.dify.ai/app/xxx/workflow`, the value `xxx` is your APP ID.
-NEXT_PUBLIC_APP_ID=
+Responsive Next.js frontend for the XiaoAn FastAPI service. The browser calls
+same-origin `/v1/*` routes; Next.js rewrites them to `XIAOAN_API_ORIGIN`.
 
-# APP API Key: This is the key used to authenticate your app's API requests. 
-# You can generate it on the app's "API Access" page by clicking the "API Key" button in the top-right corner.
-NEXT_PUBLIC_APP_KEY=
+The anonymous session token is an HttpOnly cookie owned by FastAPI. Chat
+transcripts and browser identity tokens are not persisted in local storage.
+Chat answers stream as SSE through `fetch()` so the UI can render guarded
+clauses as they arrive. The Stop control aborts the upstream request; incomplete
+turns are not retained. The complete-JSON endpoint remains a compatibility
+fallback when the streaming endpoint is unavailable.
 
-# APP URL: This is the API's base URL. If you're using the Dify cloud service, set it to: https://api.dify.ai/v1.
-NEXT_PUBLIC_API_URL=
-```
+## Local development
 
-Config more in `config/index.ts` file:   
-```js
-export const APP_INFO: AppInfo = {
-  title: 'Chat APP',
-  description: '',
-  copyright: '',
-  privacy_policy: '',
-  default_language: 'zh-Hans'
-}
-
-export const isShowPrompt = true
-export const promptTemplate = ''
-```
-
-## Getting Started
-First, install dependencies:
-```bash
-npm install
-# or
-yarn
-# or
-pnpm install
-```
-
-Then, run the development server:
+Install the locked dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Using Docker
-
-```
-docker build . -t <DOCKER_HUB_REPO>/webapp-conversation:latest
-# now you can access it in port 3000
-docker run -p 3000:3000 <DOCKER_HUB_REPO>/webapp-conversation:latest
+npx pnpm@9.15.9 install --frozen-lockfile
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Start the XiaoAn backend from the sibling `xiaoan` repository:
 
-## Learn More
+```bash
+XIAOAN_OFFLINE=true \
+XIAOAN_COOKIE_SECURE=false \
+XIAOAN_ENABLE_DEBUG=true \
+.venv/bin/python -m uvicorn \
+  --app-dir tech/chatflow/poc \
+  server:app \
+  --reload
+```
 
-To learn more about Next.js, take a look at the following resources:
+`XIAOAN_OFFLINE=true` uses deterministic templates and does not call a real
+LLM. Follow `tech/chatflow/poc/TESTING.md` in the backend repository for online
+LLM mode.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then start this frontend:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+```bash
+cp .env.example .env.local
+npx pnpm@9.15.9 dev
+```
 
-## Deploy on Vercel
+Open <http://localhost:3000/chat>.
 
-> ⚠️ If you are using [Vercel Hobby](https://vercel.com/pricing), your message will be truncated due to the limitation of vercel.
+## Configuration
 
+- `XIAOAN_API_ORIGIN`: private FastAPI origin used by the server-side rewrite.
+  It defaults to `http://127.0.0.1:8000`.
+- `NEXT_PUBLIC_ENABLE_DEBUG_EXPORT`: shows a client-side export button when
+  set to `true`. Export is explicit and downloads only the currently rendered
+  conversation; it does not upload or persist the transcript.
+- `NEXT_PUBLIC_ENABLE_CHAT_DEBUG`: shows a developer-only toggle that requests
+  structured Chatflow debug metadata and displays capsule routing, confidence,
+  ground details, and segmented server timings. The backend must also start
+  with `XIAOAN_ENABLE_DEBUG=true`; both settings default to disabled. Restart
+  the backend and Next.js after changing these environment variables.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Debug metadata is delivered in a separate SSE event and is not appended to the
+assistant answer or persisted in conversation history. Timing values are
+server-side measurements:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- `router_ms`: complete capsule-router call
+- `response_ttft_ms`: answer-model request start to its first text token
+- `first_guarded_delta_ms`: complete turn start to the first guarded text chunk
+  emitted by the backend
+- `response_generation_ms`: answer-model request start through stream completion
+- `total_ms`: complete Chatflow processing time; browser rendering and network
+  transit after backend emission are not included
+
+Attachments, accounts, and Dify workflow events are intentionally unsupported
+by the current XiaoAn API.
+
+Production proxies and CDNs in front of `/v1/*/responses/stream` must preserve
+streaming and disable response buffering or transformation.
+
+## Validation
+
+```bash
+npx pnpm@9.15.9 exec tsc --noEmit
+npx pnpm@9.15.9 build
+```

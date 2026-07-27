@@ -2,18 +2,17 @@
 import type { FC } from 'react'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import produce, { setAutoFreeze } from 'immer'
+import produce from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
-import * as XLSX from 'xlsx'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
-import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback, deleteConversation } from '@/service'
-import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
+import { deleteConversation, fetchAppParams, fetchChatList, fetchConversations, sendChatMessage } from '@/service'
+import type { ChatDebugPayload } from '@/service'
+import type { ChatItem, ConversationItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
-import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
+import { Resolution, TransferMethod } from '@/types/app'
 import Chat from '@/app/components/chat'
 import { setLocaleOnClient } from '@/i18n/client'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
@@ -23,11 +22,14 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import ResourcePanel from '@/app/components/resource-panel'
 import BackExitGuard from '@/app/components/back-exit-guard'
 import IncognitoNotice from '@/app/components/incognito-notice'
-import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
-import type { Annotation as AnnotationType } from '@/types/log'
-import { addFileInfos, sortAgentSorts } from '@/utils/tools'
-import { useUserHash } from '@/hooks/use-user-hash'
-import { broadcastFeedback, flushFeedback } from '@/utils/feedback-broadcast'
+import { APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
+
+const debugExportEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_EXPORT === 'true'
+const chatDebugAvailable = process.env.NEXT_PUBLIC_ENABLE_CHAT_DEBUG === 'true'
+
+const formatTiming = (value: number | null) => {
+  return value === null ? 'N/A' : `${value.toFixed(2)} ms`
+}
 
 export interface IMainProps {
   params: any
@@ -38,23 +40,6 @@ const Main: FC<IMainProps> = () => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const isDesktop = media === MediaType.pc
-  const hasSetAppConfig = APP_ID && API_KEY
-
-  // Hash identity — auto-generate on first visit, prompt user to save
-  const { currentHash, initialized, generateHash } = useUserHash()
-  useEffect(() => {
-    if (!initialized) return
-    if (currentHash === null) {
-      const newHash = generateHash()
-      Toast.notify({
-        type: 'success',
-        message: `已为你生成识别码，请点击侧边栏「🔑 我的身份识别码」复制保存，换设备时可凭此找回聊天记录。`,
-        duration: 8000,
-      } as any)
-    }
-    // only run once after localStorage is read
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized])
 
   /*
   * app info
@@ -75,17 +60,11 @@ const Main: FC<IMainProps> = () => {
     transfer_methods: [TransferMethod.local_file],
   })
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
+  const [chatDebugEnabled, setChatDebugEnabled] = useState(false)
+  const [latestChatDebug, setLatestChatDebug] = useState<ChatDebugPayload | null>(null)
 
   useEffect(() => {
-    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
-  }, [APP_INFO?.title])
-
-  // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
-  useEffect(() => {
-    setAutoFreeze(false)
-    return () => {
-      setAutoFreeze(true)
-    }
+    if (APP_INFO?.title) { document.title = `${APP_INFO.title} — 反家暴支持助手` }
   }, [])
 
   /*
@@ -95,9 +74,7 @@ const Main: FC<IMainProps> = () => {
     conversationList,
     setConversationList,
     currConversationId,
-    getCurrConversationId,
     setCurrConversationId,
-    getConversationIdFromStorage,
     isNewConversation,
     currConversationInfo,
     currInputs,
@@ -108,16 +85,7 @@ const Main: FC<IMainProps> = () => {
     setExistConversationInfo,
   } = useConversation()
 
-  const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
-  const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
-  const handleStartChat = (inputs: Record<string, any>) => {
-    createNewChat()
-    setConversationIdChangeBecauseOfNew(true)
-    setCurrInputs(inputs)
-    setChatStarted()
-    // parse variables in introduction
-    setChatList(generateNewChatListWithOpenStatement('', inputs))
-  }
+  const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew] = useGetState(false)
   const hasSetInputs = true
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
@@ -163,7 +131,6 @@ const Main: FC<IMainProps> = () => {
           newChatList.push({
             id: item.id,
             content: item.answer,
-            agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
             feedback: item.feedback,
             isAnswer: true,
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
@@ -178,6 +145,7 @@ const Main: FC<IMainProps> = () => {
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
   const handleConversationIdChange = (id: string) => {
+    setLatestChatDebug(null)
     if (id === '-1') {
       createNewChat()
       setConversationIdChangeBecauseOfNew(true)
@@ -205,22 +173,8 @@ const Main: FC<IMainProps> = () => {
         })
       }, 50)
     }
-  }, [chatList, currConversationId])
+  }, [chatList, currConversationId, latestChatDebug])
 
-  // Broadcast chat data to /feedback admin page in real-time (cross-device)
-  useEffect(() => {
-    if (chatList.length === 0) return
-    broadcastFeedback({
-      userHash: currentHash || undefined,
-      conversationId: currConversationId,
-      conversationName,
-      chatList,
-      timestamp: Date.now(),
-    })
-  }, [chatList, currConversationId, conversationName, currentHash])
-
-  // user can not edit inputs if user had send message
-  const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
   const createNewChat = () => {
     // if new chat is already exist, do not create new chat
     if (conversationList.some(item => item.id === '-1')) { return }
@@ -257,22 +211,12 @@ const Main: FC<IMainProps> = () => {
 
   // init
   useEffect(() => {
-    if (!hasSetAppConfig) {
-      setAppUnavailable(true)
-      return
-    }
     (async () => {
       try {
         const [conversationData, appParams] = await Promise.all([fetchConversations(), fetchAppParams()])
         // handle current conversation id
-        const { data: conversations, error } = conversationData as { data: ConversationItem[], error: string }
-        if (error) {
-          Toast.notify({ type: 'error', message: error })
-          throw new Error(error)
-          return
-        }
-        const _conversationId = getConversationIdFromStorage(APP_ID)
-        const currentConversation = conversations.find(item => item.id === _conversationId)
+        const { data: conversations } = conversationData
+        const currentConversation = conversations[0]
         const isNotNewConversation = !!currentConversation
 
         // fetch new conversation info
@@ -311,7 +255,7 @@ const Main: FC<IMainProps> = () => {
         })
         setConversationList(conversations as ConversationItem[])
 
-        if (isNotNewConversation) { setCurrConversationId(_conversationId, APP_ID, false) }
+        if (isNotNewConversation) { setCurrConversationId(currentConversation.id, APP_ID, false) }
 
         setInited(true)
       }
@@ -328,8 +272,12 @@ const Main: FC<IMainProps> = () => {
   }, [])
 
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
-  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const activeResponseController = useRef<AbortController | null>(null)
   const { notify } = Toast
+  useEffect(() => () => {
+    activeResponseController.current?.abort()
+  }, [])
+
   const logError = (message: string) => {
     notify({ type: 'error', message })
   }
@@ -349,13 +297,6 @@ const Main: FC<IMainProps> = () => {
     }
     return true
   }
-
-  const [controlFocus, setControlFocus] = useState(0)
-  const [openingSuggestedQuestions, setOpeningSuggestedQuestions] = useState<string[]>([])
-  const [messageTaskId, setMessageTaskId] = useState('')
-  const [hasStopResponded, setHasStopResponded, getHasStopResponded] = useGetState(false)
-  const [isRespondingConIsCurrCon, setIsRespondingConCurrCon, getIsRespondingConIsCurrCon] = useGetState(true)
-  const [userQuery, setUserQuery] = useState('')
 
   const updateCurrentQA = ({
     responseItem,
@@ -380,49 +321,21 @@ const Main: FC<IMainProps> = () => {
     setChatList(newListWithAnswer)
   }
 
-  const transformToServerFile = (fileItem: any) => {
-    return {
-      type: 'image',
-      transfer_method: fileItem.transferMethod,
-      url: fileItem.url,
-      upload_file_id: fileItem.id,
-    }
+  const handleStopResponse = () => {
+    activeResponseController.current?.abort()
   }
 
-  const handleSend = async (message: string, files?: VisionFile[]) => {
+  const handleSend = async (message: string, _files?: VisionFile[]) => {
     if (isResponding) {
       notify({ type: 'info', message: t('app.errorMessage.waitForResponse') })
       return
     }
-    const toServerInputs: Record<string, any> = {}
-    if (currInputs) {
-      Object.keys(currInputs).forEach((key) => {
-        const value = currInputs[key]
-        if (value.supportFileType) { toServerInputs[key] = transformToServerFile(value) }
-
-        else if (value[0]?.supportFileType) { toServerInputs[key] = value.map((item: any) => transformToServerFile(item)) }
-
-        else { toServerInputs[key] = value }
-      })
-    }
-
-    const data: Record<string, any> = {
-      inputs: toServerInputs,
+    const data = {
       query: message,
       conversation_id: isNewConversation ? null : currConversationId,
+      debug: chatDebugAvailable && chatDebugEnabled,
     }
-
-    if (files && files?.length > 0) {
-      data.files = files.map((item) => {
-        if (item.transfer_method === TransferMethod.local_file) {
-          return {
-            ...item,
-            url: '',
-          }
-        }
-        return item
-      })
-    }
+    if (chatDebugEnabled) { setLatestChatDebug(null) }
 
     // question
     const questionId = `question-${Date.now()}`
@@ -430,7 +343,7 @@ const Main: FC<IMainProps> = () => {
       id: questionId,
       content: message,
       isAnswer: false,
-      message_files: (files || []).filter((f: any) => f.type === 'image'),
+      message_files: [],
     }
 
     const placeholderAnswerId = `answer-placeholder-${Date.now()}`
@@ -443,47 +356,37 @@ const Main: FC<IMainProps> = () => {
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
     setChatList(newList)
 
-    let isAgentMode = false
-
     // answer
     const responseItem: ChatItem = {
       id: `${Date.now()}`,
       content: '',
-      agent_thoughts: [],
       message_files: [],
       isAnswer: true,
     }
     let hasSetResponseId = false
 
-    const prevTempNewConversationId = getCurrConversationId() || '-1'
     let tempNewConversationId = ''
 
     setRespondingTrue()
     sendChatMessage(data, {
-      getAbortController: (abortController) => {
-        setAbortController(abortController)
+      getAbortController(controller) {
+        activeResponseController.current = controller
       },
-      onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
-        if (!isAgentMode) {
-          responseItem.content = responseItem.content + message
+      onStarted({ conversationId: newConversationId, messageId }) {
+        tempNewConversationId = newConversationId
+        if (!hasSetResponseId) {
+          responseItem.id = messageId
+          hasSetResponseId = true
         }
-        else {
-          const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
-          if (lastThought) { lastThought.thought = lastThought.thought + message } // need immer setAutoFreeze
-        }
+      },
+      onData: (response, _isFirstMessage, { conversationId: newConversationId, messageId }) => {
+        responseItem.content += response
         if (messageId && !hasSetResponseId) {
           responseItem.id = messageId
           hasSetResponseId = true
         }
 
-        if (isFirstMessage && newConversationId) { tempNewConversationId = newConversationId }
-
-        setMessageTaskId(taskId)
-        // has switched to other conversation
-        if (prevTempNewConversationId !== getCurrConversationId()) {
-          setIsRespondingConCurrCon(false)
-          return
-        }
+        tempNewConversationId = newConversationId
         updateCurrentQA({
           responseItem,
           questionId,
@@ -491,208 +394,42 @@ const Main: FC<IMainProps> = () => {
           questionItem,
         })
       },
-      async onCompleted(hasError?: boolean) {
-        if (hasError) { return }
-
-        if (getConversationIdChangeBecauseOfNew()) {
-          const { data: allConversations }: any = await fetchConversations()
-          const newItem: any = await generationConversationName(allConversations[0].id)
-
-          const newAllConversations = produce(allConversations, (draft: any) => {
-            draft[0].name = newItem.name
-          })
-          setConversationList(newAllConversations as any)
+      onDebug(debug) {
+        setLatestChatDebug(debug)
+      },
+      async onCompleted() {
+        activeResponseController.current = null
+        setCurrConversationId(tempNewConversationId, APP_ID, false)
+        try {
+          const { data: allConversations } = await fetchConversations()
+          setConversationList(allConversations)
         }
-        setConversationIdChangeBecauseOfNew(false)
-        resetNewConversationInputs()
-        setChatNotStarted()
-        setCurrConversationId(tempNewConversationId, APP_ID, true)
+        catch {
+          notify({ type: 'error', message: '对话已回复，但会话列表刷新失败' })
+        }
+        finally {
+          setConversationIdChangeBecauseOfNew(false)
+          resetNewConversationInputs()
+          setRespondingFalse()
+        }
+      },
+      onError(message, code) {
+        activeResponseController.current = null
         setRespondingFalse()
-      },
-      onFile(file) {
-        const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
-        if (lastThought) { lastThought.message_files = [...(lastThought as any).message_files, { ...file }] }
-
-        updateCurrentQA({
-          responseItem,
-          questionId,
-          placeholderAnswerId,
-          questionItem,
+        notify({
+          type: code === 'aborted' ? 'info' : 'error',
+          message: code === 'aborted' ? `${message}，本轮消息未保存` : message,
         })
-      },
-      onThought(thought) {
-        isAgentMode = true
-        const response = responseItem as any
-        if (thought.message_id && !hasSetResponseId) {
-          response.id = thought.message_id
-          hasSetResponseId = true
-        }
-        // responseItem.id = thought.message_id;
-        if (response.agent_thoughts.length === 0) {
-          response.agent_thoughts.push(thought)
-        }
-        else {
-          const lastThought = response.agent_thoughts[response.agent_thoughts.length - 1]
-          // thought changed but still the same thought, so update.
-          if (lastThought.id === thought.id) {
-            thought.thought = lastThought.thought
-            thought.message_files = lastThought.message_files
-            responseItem.agent_thoughts![response.agent_thoughts.length - 1] = thought
-          }
-          else {
-            responseItem.agent_thoughts!.push(thought)
-          }
-        }
-        // has switched to other conversation
-        if (prevTempNewConversationId !== getCurrConversationId()) {
-          setIsRespondingConCurrCon(false)
-          return false
-        }
-
-        updateCurrentQA({
-          responseItem,
-          questionId,
-          placeholderAnswerId,
-          questionItem,
-        })
-      },
-      onMessageEnd: (messageEnd) => {
-        if (messageEnd.metadata?.annotation_reply) {
-          responseItem.id = messageEnd.id
-          responseItem.annotation = ({
-            id: messageEnd.metadata.annotation_reply.id,
-            authorName: messageEnd.metadata.annotation_reply.account.name,
-          } as AnnotationType)
-          const newListWithAnswer = produce(
-            getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
-            (draft) => {
-              if (!draft.find(item => item.id === questionId)) { draft.push({ ...questionItem }) }
-
-              draft.push({
-                ...responseItem,
-              })
-            },
-          )
-          setChatList(newListWithAnswer)
-          return
-        }
-        // not support show citation
-        // responseItem.citation = messageEnd.retriever_resources
-        const newListWithAnswer = produce(
-          getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
-          (draft) => {
-            if (!draft.find(item => item.id === questionId)) { draft.push({ ...questionItem }) }
-
-            draft.push({ ...responseItem })
-          },
+        const failedResponseId = responseItem.id
+        setChatList(
+          getChatList().filter(item =>
+            item.id !== questionId
+            && item.id !== placeholderAnswerId
+            && item.id !== failedResponseId,
+          ),
         )
-        setChatList(newListWithAnswer)
-      },
-      onMessageReplace: (messageReplace) => {
-        setChatList(produce(
-          getChatList(),
-          (draft) => {
-            const current = draft.find(item => item.id === messageReplace.id)
-
-            if (current) { current.content = messageReplace.answer }
-          },
-        ))
-      },
-      onError() {
-        setRespondingFalse()
-        // role back placeholder answer
-        setChatList(produce(getChatList(), (draft) => {
-          draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
-        }))
-      },
-      onWorkflowStarted: ({ workflow_run_id, task_id }) => {
-        // taskIdRef.current = task_id
-        responseItem.workflow_run_id = workflow_run_id
-        responseItem.workflowProcess = {
-          status: WorkflowRunningStatus.Running,
-          tracing: [],
-        }
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onWorkflowFinished: ({ data }) => {
-        responseItem.workflowProcess!.status = data.status as WorkflowRunningStatus
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onNodeStarted: ({ data }) => {
-        responseItem.workflowProcess!.tracing!.push(data as any)
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
-      },
-      onNodeFinished: ({ data }) => {
-        const currentIndex = responseItem.workflowProcess!.tracing!.findIndex(item => item.node_id === data.node_id)
-        responseItem.workflowProcess!.tracing[currentIndex] = data as any
-        setChatList(produce(getChatList(), (draft) => {
-          const currentIndex = draft.findIndex(item => item.id === responseItem.id)
-          draft[currentIndex] = {
-            ...draft[currentIndex],
-            ...responseItem,
-          }
-        }))
       },
     })
-  }
-
-  const handleFeedback = async (messageId: string, feedback: Feedbacktype) => {
-    await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating } })
-    const newChatList = chatList.map((item) => {
-      if (item.id === messageId) {
-        return {
-          ...item,
-          feedback,
-        }
-      }
-      return item
-    })
-    setChatList(newChatList)
-    notify({ type: 'success', message: t('common.api.success') })
-  }
-
-  const handleDeleteMessage = (id: string) => {
-    // Local UI removal only — Dify has no single-message delete API
-    setChatList(produce(getChatList(), (draft) => {
-      const idx = draft.findIndex(item => item.id === id)
-      if (idx !== -1) { draft.splice(idx, 1) }
-    }))
-  }
-
-  const handleReview = (messageId: string, review: { score: number; comment: string }) => {
-    const newList = produce(getChatList(), (draft) => {
-      const item = draft.find(i => i.id === messageId)
-      if (item) { item.userReview = review }
-    })
-    setChatList(newList)
-    // Immediately push review to server so admin sees it without delay
-    broadcastFeedback({
-      userHash: currentHash || undefined,
-      conversationId: currConversationId,
-      conversationName,
-      chatList: newList,
-      timestamp: Date.now(),
-    })
-    flushFeedback()
-    notify({ type: 'success', message: '评价已保存' })
   }
 
   const handleExport = () => {
@@ -700,41 +437,37 @@ const Main: FC<IMainProps> = () => {
     const rows: Record<string, string | number>[] = []
     let seq = 1
     list.forEach((item) => {
-      if (item.isOpeningStatement) return
+      if (item.isOpeningStatement) { return }
       const role = item.isAnswer ? 'AI' : '用户'
-      const workflowSteps = item.workflowProcess?.tracing
-        ?.map((t: any) => `${t.title ?? t.node_type}`)
-        .join(' → ') ?? ''
-      const score = (!item.isAnswer || !item.userReview) ? '' : item.userReview.score
-      const comment = (!item.isAnswer || !item.userReview) ? '' : (item.userReview.comment || '')
       rows.push({
-        '序号': seq++,
-        '角色': role,
-        '内容': item.content,
-        'Workflow节点': workflowSteps,
-        '用户评分': score,
-        '用户评论': comment,
+        序号: seq++,
+        角色: role,
+        内容: item.content,
       })
     })
     if (rows.length === 0) {
       notify({ type: 'info', message: '当前对话没有内容可导出' })
       return
     }
-    const ws = XLSX.utils.json_to_sheet(rows)
-    // Column widths
-    ws['!cols'] = [{ wch: 6 }, { wch: 6 }, { wch: 60 }, { wch: 30 }, { wch: 8 }, { wch: 40 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '聊天记录')
-    const filename = `聊天记录_${conversationName}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    XLSX.writeFile(wb, filename)
+    const blob = new Blob(
+      [JSON.stringify({ exported_at: new Date().toISOString(), messages: rows }, null, 2)],
+      { type: 'application/json;charset=utf-8' },
+    )
+    const downloadUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `聊天记录_${conversationName}_${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(downloadUrl)
   }
 
   const handleDeleteConversation = async (id: string) => {
     try {
       await deleteConversation(id)
     }
-    catch (e) {
-      // silently continue — remove from UI regardless
+    catch {
+      notify({ type: 'error', message: '清除对话失败，请稍后重试' })
+      return
     }
     const remaining = conversationList.filter(item => item.id !== id)
     setConversationList(remaining)
@@ -746,7 +479,13 @@ const Main: FC<IMainProps> = () => {
 
   const handleClearAll = async () => {
     const realConversations = conversationList.filter(item => item.id !== '-1')
-    await Promise.allSettled(realConversations.map(item => deleteConversation(item.id)))
+    try {
+      await Promise.all(realConversations.map(item => deleteConversation(item.id)))
+    }
+    catch {
+      notify({ type: 'error', message: '清除对话失败，请稍后重试' })
+      return
+    }
     setConversationList([])
     setCurrConversationId('-1', APP_ID)
   }
@@ -774,7 +513,7 @@ const Main: FC<IMainProps> = () => {
     )
   }
 
-  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} /> }
+  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} /> }
 
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
@@ -810,27 +549,106 @@ const Main: FC<IMainProps> = () => {
         <div className='flex-grow flex h-[calc(100vh_-_3rem)] overflow-hidden'>
           <div className='flex-grow flex flex-col overflow-y-auto'>
             {/* Conversation name header */}
-            <div className="shrink-0 px-4 py-3" style={{ borderBottom: '1px solid #F0EBE5' }}>
-              <h1 className="text-base font-semibold" style={{ color: '#3D3028', fontFamily: "'Noto Serif SC', serif" }}>
+            <div className="shrink-0 flex items-center justify-between gap-4 px-4 py-3" style={{ borderBottom: '1px solid #F0EBE5' }}>
+              <h1 className="text-base font-semibold" style={{ color: '#3D3028', fontFamily: '\'Noto Serif SC\', serif' }}>
                 {conversationName}
               </h1>
+              {chatDebugAvailable && (
+                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={chatDebugEnabled}
+                    onChange={(event) => {
+                      const enabled = event.target.checked
+                      setChatDebugEnabled(enabled)
+                      if (!enabled) { setLatestChatDebug(null) }
+                    }}
+                  />
+                  显示 Chatflow Debug
+                </label>
+              )}
             </div>
             <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
               <Chat
                 chatList={chatList}
                 onSend={handleSend}
-                onFeedback={handleFeedback}
+                onStop={handleStopResponse}
+                feedbackDisabled
                 isResponding={isResponding}
                 checkCanSend={checkCanSend}
                 visionConfig={visionConfig}
                 fileConfig={fileConfig}
-                onDeleteMessage={handleDeleteMessage}
-                onReview={handleReview}
                 inputLeft={inputLeft}
                 inputRight={inputRight}
+                afterMessages={chatDebugAvailable && chatDebugEnabled && latestChatDebug
+                  ? (
+                      <section
+                        data-testid="chat-debug-panel"
+                        className="mx-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-gray-700 shadow-sm"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h2 className="text-sm font-semibold text-amber-950">Chatflow Debug</h2>
+                          <span className="rounded-full bg-amber-100 px-2 py-1 font-mono text-amber-900">
+                            {latestChatDebug.route.capsule_id}
+                            {' · '}
+                            {(latestChatDebug.route.confidence * 100).toFixed(0)}
+                            %
+                          </span>
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 pc:grid-cols-4">
+                          <div>
+                            <dt className="text-gray-500">胶囊</dt>
+                            <dd className="mt-0.5 font-medium text-gray-900">
+                              {latestChatDebug.route.capsule_title || latestChatDebug.route.capsule_id}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">路由方式</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{latestChatDebug.route.method}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">Router</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{formatTiming(latestChatDebug.timings.router_ms)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">Ground</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{formatTiming(latestChatDebug.timings.ground_ms)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">回答首 token (TTFT)</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{formatTiming(latestChatDebug.timings.response_ttft_ms)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">首个可见分段</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{formatTiming(latestChatDebug.timings.first_guarded_delta_ms)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">回答生成</dt>
+                            <dd className="mt-0.5 font-mono text-gray-900">{formatTiming(latestChatDebug.timings.response_generation_ms)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-gray-500">总耗时</dt>
+                            <dd className="mt-0.5 font-mono font-semibold text-gray-900">{formatTiming(latestChatDebug.timings.total_ms)}</dd>
+                          </div>
+                        </dl>
+                        <p className="mt-3 break-words text-gray-600">
+                          路由原因：
+                          {latestChatDebug.route.reason || '未提供'}
+                        </p>
+                        <details className="mt-3">
+                          <summary className="cursor-pointer font-medium text-amber-900">
+                            完整 CLI Debug JSON
+                          </summary>
+                          <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-3 text-[11px] leading-5 text-gray-100">
+                            {JSON.stringify(latestChatDebug, null, 2)}
+                          </pre>
+                        </details>
+                      </section>
+                    )
+                  : null}
               />
               {/* Export button */}
-              {chatList.filter(i => !i.isOpeningStatement).length > 0 && (
+              {debugExportEnabled && chatList.filter(i => !i.isOpeningStatement).length > 0 && (
                 <div className="flex justify-end px-2 pt-1 pb-2">
                   <button
                     onClick={handleExport}
@@ -841,7 +659,7 @@ const Main: FC<IMainProps> = () => {
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    导出聊天记录 (.xlsx)
+                    调试：导出当前聊天 (.json)
                   </button>
                 </div>
               )}
