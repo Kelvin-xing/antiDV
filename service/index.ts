@@ -26,6 +26,18 @@ interface SendChatBody {
   query: string
   conversation_id?: string | null
   debug?: boolean
+  router_model?: string
+  response_model?: string
+}
+
+export interface ChatModelRoleConfig {
+  default: string
+  options: string[]
+}
+
+export interface ChatModelConfig {
+  router: ChatModelRoleConfig
+  response: ChatModelRoleConfig
 }
 
 export interface ChatDebugTimings {
@@ -40,6 +52,10 @@ export interface ChatDebugTimings {
 }
 
 export interface ChatDebugPayload {
+  models?: {
+    router: string
+    response: string
+  } | null
   route: {
     capsule_id: string
     capsule_title: string
@@ -148,10 +164,22 @@ const readChatDebugPayload = (value: unknown): ChatDebugPayload => {
   const payload = value as Record<string, unknown>
   const route = payload.route
   const timings = payload.timings
+  const models = payload.models
   if (!route || typeof route !== 'object' || Array.isArray(route))
     { throw new Error('调试信息缺少路由结果') }
   if (!timings || typeof timings !== 'object' || Array.isArray(timings))
     { throw new Error('调试信息缺少分段计时') }
+  if (
+    models !== undefined
+    && models !== null
+    && (
+      typeof models !== 'object'
+      || Array.isArray(models)
+      || typeof (models as Record<string, unknown>).router !== 'string'
+      || typeof (models as Record<string, unknown>).response !== 'string'
+    )
+  )
+    { throw new Error('调试信息模型字段格式无效') }
 
   const routeRecord = route as Record<string, unknown>
   const timingRecord = timings as Record<string, unknown>
@@ -194,6 +222,10 @@ const assertEventIdentity = (
 }
 
 export const fetchAppParams = async () => appParameters
+
+export const fetchChatModelConfig = async (): Promise<ChatModelConfig> => {
+  return apiRequest<ChatModelConfig>('/config/models')
+}
 
 export const fetchConversations = async (): Promise<ConversationsResponse> => {
   try {
@@ -254,6 +286,12 @@ export const sendChatMessage = async (
     }
 
     const responsePath = `/conversations/${encodeURIComponent(conversationId)}/responses`
+    const requestBody = JSON.stringify({
+      message: body.query,
+      debug: body.debug ?? false,
+      ...(body.router_model ? { router_model: body.router_model } : {}),
+      ...(body.response_model ? { response_model: body.response_model } : {}),
+    })
     let streamIdentity: StreamIdentity | null = null
     let streamCompleted = false
     let firstDelta = true
@@ -279,10 +317,7 @@ export const sendChatMessage = async (
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            message: body.query,
-            debug: body.debug ?? false,
-          }),
+          body: requestBody,
         },
         (event) => {
           const payload = readEventObject(event.data)
@@ -355,10 +390,7 @@ export const sendChatMessage = async (
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            message: body.query,
-            debug: body.debug ?? false,
-          }),
+          body: requestBody,
         })
         handlers.onStarted?.({
           conversationId: response.conversation_id,

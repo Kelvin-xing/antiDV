@@ -8,8 +8,8 @@ import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import Header from '@/app/components/header'
-import { deleteConversation, fetchAppParams, fetchChatList, fetchConversations, sendChatMessage } from '@/service'
-import type { ChatDebugPayload } from '@/service'
+import { deleteConversation, fetchAppParams, fetchChatList, fetchChatModelConfig, fetchConversations, sendChatMessage } from '@/service'
+import type { ChatDebugPayload, ChatModelConfig } from '@/service'
 import type { ChatItem, ConversationItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod } from '@/types/app'
@@ -62,6 +62,10 @@ const Main: FC<IMainProps> = () => {
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
   const [chatDebugEnabled, setChatDebugEnabled] = useState(false)
   const [latestChatDebug, setLatestChatDebug] = useState<ChatDebugPayload | null>(null)
+  const [chatModelConfig, setChatModelConfig] = useState<ChatModelConfig | null>(null)
+  const [chatModelConfigError, setChatModelConfigError] = useState<string | null>(null)
+  const [routerModel, setRouterModel] = useState('')
+  const [responseModel, setResponseModel] = useState('')
 
   useEffect(() => {
     if (APP_INFO?.title) { document.title = `${APP_INFO.title} — 反家暴支持助手` }
@@ -274,6 +278,26 @@ const Main: FC<IMainProps> = () => {
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
   const activeResponseController = useRef<AbortController | null>(null)
   const { notify } = Toast
+  useEffect(() => {
+    if (!chatDebugAvailable) { return }
+
+    let active = true
+    fetchChatModelConfig()
+      .then((config) => {
+        if (!active) { return }
+        setChatModelConfig(config)
+        setChatModelConfigError(null)
+      })
+      .catch((error) => {
+        if (!active) { return }
+        setChatModelConfigError(
+          error instanceof Error ? error.message : '模型配置加载失败',
+        )
+      })
+    return () => {
+      active = false
+    }
+  }, [])
   useEffect(() => () => {
     activeResponseController.current?.abort()
   }, [])
@@ -334,6 +358,8 @@ const Main: FC<IMainProps> = () => {
       query: message,
       conversation_id: isNewConversation ? null : currConversationId,
       debug: chatDebugAvailable && chatDebugEnabled,
+      router_model: routerModel || undefined,
+      response_model: responseModel || undefined,
     }
     if (chatDebugEnabled) { setLatestChatDebug(null) }
 
@@ -568,6 +594,64 @@ const Main: FC<IMainProps> = () => {
                 </label>
               )}
             </div>
+            {chatDebugAvailable && (
+              <div
+                data-testid="chat-model-selectors"
+                className="shrink-0 flex flex-wrap items-end gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-2 text-xs text-gray-700"
+              >
+                {chatModelConfig
+                  ? (
+                      <>
+                        <label className="flex min-w-[210px] flex-1 flex-col gap-1">
+                          <span className="font-medium text-amber-950">Router 模型</span>
+                          <select
+                            aria-label="Router 模型"
+                            className="rounded-lg border border-amber-200 bg-white px-2 py-1.5 font-mono text-xs outline-none focus:border-amber-500"
+                            value={routerModel}
+                            disabled={isResponding}
+                            onChange={event => setRouterModel(event.target.value)}
+                          >
+                            <option value="">
+                              后端默认（
+                              {chatModelConfig.router.default}
+                              ）
+                            </option>
+                            {chatModelConfig.router.options
+                              .filter(model => model !== chatModelConfig.router.default)
+                              .map(model => <option key={model} value={model}>{model}</option>)}
+                          </select>
+                        </label>
+                        <label className="flex min-w-[210px] flex-1 flex-col gap-1">
+                          <span className="font-medium text-amber-950">回答模型</span>
+                          <select
+                            aria-label="回答模型"
+                            className="rounded-lg border border-amber-200 bg-white px-2 py-1.5 font-mono text-xs outline-none focus:border-amber-500"
+                            value={responseModel}
+                            disabled={isResponding}
+                            onChange={event => setResponseModel(event.target.value)}
+                          >
+                            <option value="">
+                              后端默认（
+                              {chatModelConfig.response.default}
+                              ）
+                            </option>
+                            {chatModelConfig.response.options
+                              .filter(model => model !== chatModelConfig.response.default)
+                              .map(model => <option key={model} value={model}>{model}</option>)}
+                          </select>
+                        </label>
+                        <span className="pb-1 text-[11px] text-gray-500">
+                          仅影响下一轮请求；留空使用后端默认值
+                        </span>
+                      </>
+                    )
+                  : (
+                      <span className={chatModelConfigError ? 'text-red-700' : 'text-gray-500'}>
+                        {chatModelConfigError || '正在加载模型配置…'}
+                      </span>
+                    )}
+              </div>
+            )}
             <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
               <Chat
                 chatList={chatList}
@@ -596,6 +680,18 @@ const Main: FC<IMainProps> = () => {
                           </span>
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 pc:grid-cols-4">
+                          {latestChatDebug.models && (
+                            <>
+                              <div>
+                                <dt className="text-gray-500">Router 模型</dt>
+                                <dd className="mt-0.5 break-all font-mono text-gray-900">{latestChatDebug.models.router}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-gray-500">回答模型</dt>
+                                <dd className="mt-0.5 break-all font-mono text-gray-900">{latestChatDebug.models.response}</dd>
+                              </div>
+                            </>
+                          )}
                           <div>
                             <dt className="text-gray-500">胶囊</dt>
                             <dd className="mt-0.5 font-medium text-gray-900">
