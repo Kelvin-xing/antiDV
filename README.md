@@ -51,14 +51,18 @@ Open <http://localhost:3000/chat>.
   set to `true`. Export is explicit and downloads only the currently rendered
   conversation; it does not upload or persist the transcript.
 - `NEXT_PUBLIC_ENABLE_CHAT_DEBUG`: shows a developer-only toggle that requests
-  structured Chatflow debug metadata and displays capsule routing, confidence,
-  ground details, and segmented server timings. The backend must also start
-  with `XIAOAN_ENABLE_DEBUG=true`; both settings default to disabled. Restart
-  the backend and Next.js after changing these environment variables.
+  structured Chatflow debug metadata, plus Router and answer-model selectors
+  populated from the backend's `/v1/config/models` allowlists. Leaving either
+  selector on "backend default" omits that request field. Debug output still
+  requires the backend to start with `XIAOAN_ENABLE_DEBUG=true`; both debug
+  settings default to disabled. Restart the backend and Next.js after changing
+  these environment variables.
 
 Debug metadata is delivered in a separate SSE event and is not appended to the
 assistant answer or persisted in conversation history. Timing values are
 server-side measurements:
+
+- `models.router` / `models.response`: actual models selected for that request
 
 - `router_ms`: complete capsule-router call
 - `response_ttft_ms`: answer-model request start to its first text token
@@ -73,6 +77,30 @@ by the current XiaoAn API.
 
 Production proxies and CDNs in front of `/v1/*/responses/stream` must preserve
 streaming and disable response buffering or transformation.
+
+## Production container
+
+The production image uses the committed pnpm lockfile and Next.js standalone
+output. `XIAOAN_API_ORIGIN` is consumed while Next.js builds its rewrite, so it
+must be supplied as a build argument. For two apps in the same Azure Container
+Apps environment, use the backend app name as the internal origin:
+
+```bash
+ACR_NAME="<registry-name>"
+FRONTEND_TAG=$(git rev-parse --short=12 HEAD)
+
+az acr build \
+  --registry "$ACR_NAME" \
+  --image "xiaoan-web:$FRONTEND_TAG" \
+  --file Dockerfile \
+  --build-arg XIAOAN_API_ORIGIN=http://xiaoan-api \
+  .
+```
+
+Debug build arguments default to `false`. Do not enable them for production:
+
+- `NEXT_PUBLIC_ENABLE_DEBUG_EXPORT`
+- `NEXT_PUBLIC_ENABLE_CHAT_DEBUG`
 
 ## Validation
 
