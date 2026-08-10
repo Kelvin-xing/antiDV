@@ -9,7 +9,7 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import Header from '@/app/components/header'
 import { deleteConversation, fetchAppParams, fetchChatList, fetchChatModelConfig, fetchConversations, sendChatMessage } from '@/service'
-import type { ChatDebugPayload, ChatModelConfig } from '@/service'
+import type { ChatDebugPayload, ChatHistoryItem, ChatModelConfig } from '@/service'
 import type { ChatItem, ConversationItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod } from '@/types/app'
@@ -60,7 +60,7 @@ const Main: FC<IMainProps> = () => {
     transfer_methods: [TransferMethod.local_file],
   })
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
-  const [chatDebugEnabled, setChatDebugEnabled] = useState(false)
+  const [chatDebugEnabled, setChatDebugEnabled] = useState(chatDebugAvailable)
   const [latestChatDebug, setLatestChatDebug] = useState<ChatDebugPayload | null>(null)
   const [chatModelConfig, setChatModelConfig] = useState<ChatModelConfig | null>(null)
   const [chatModelConfigError, setChatModelConfigError] = useState<string | null>(null)
@@ -458,31 +458,55 @@ const Main: FC<IMainProps> = () => {
     })
   }
 
-  const handleExport = () => {
-    const list = getChatList()
-    const rows: Record<string, string | number>[] = []
-    let seq = 1
-    list.forEach((item) => {
-      if (item.isOpeningStatement) { return }
-      const role = item.isAnswer ? 'AI' : '用户'
-      rows.push({
-        序号: seq++,
-        角色: role,
-        内容: item.content,
-      })
-    })
-    if (rows.length === 0) {
+  const handleExport = async () => {
+    if (isResponding) {
+      notify({ type: 'info', message: '请等待当前回答完成后再导出' })
+      return
+    }
+    if (isNewConversation || currConversationId === '-1') {
       notify({ type: 'info', message: '当前对话没有内容可导出' })
       return
     }
+
+    let turns: ChatHistoryItem[]
+    try {
+      const response = await fetchChatList(currConversationId)
+      turns = response.data
+    }
+    catch {
+      notify({ type: 'error', message: '导出聊天记录失败，请稍后重试' })
+      return
+    }
+    if (turns.length === 0) {
+      notify({ type: 'info', message: '当前对话没有内容可导出' })
+      return
+    }
+
+    const exportedAt = new Date().toISOString()
     const blob = new Blob(
-      [JSON.stringify({ exported_at: new Date().toISOString(), messages: rows }, null, 2)],
+      [JSON.stringify({
+        schema_version: 1,
+        exported_at: exportedAt,
+        conversation_id: currConversationId,
+        conversation_name: conversationName,
+        turns: turns.map((turn, index) => ({
+          turn: index + 1,
+          user: turn.query,
+          assistant: turn.answer,
+          route_id: turn.route_id,
+          safety_level: turn.safety_level,
+          debug: turn.debug,
+        })),
+      }, null, 2)],
       { type: 'application/json;charset=utf-8' },
     )
     const downloadUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
+    const safeConversationName = conversationName
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .slice(0, 60) || '当前对话'
     link.href = downloadUrl
-    link.download = `聊天记录_${conversationName}_${new Date().toISOString().slice(0, 10)}.json`
+    link.download = `聊天记录_${safeConversationName}_${exportedAt.slice(0, 10)}.json`
     link.click()
     URL.revokeObjectURL(downloadUrl)
   }
@@ -748,6 +772,7 @@ const Main: FC<IMainProps> = () => {
                 <div className="flex justify-end px-2 pt-1 pb-2">
                   <button
                     onClick={handleExport}
+                    disabled={isResponding}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors shadow-sm"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -755,7 +780,7 @@ const Main: FC<IMainProps> = () => {
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    调试：导出当前聊天 (.json)
+                    导出当前对话（含路由 / Debug）
                   </button>
                 </div>
               )}

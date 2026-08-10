@@ -48,8 +48,9 @@ Open <http://localhost:3000/chat>.
 - `XIAOAN_API_ORIGIN`: private FastAPI origin used by the server-side rewrite.
   It defaults to `http://127.0.0.1:8000`.
 - `NEXT_PUBLIC_ENABLE_DEBUG_EXPORT`: shows a client-side export button when
-  set to `true`. Export is explicit and downloads only the currently rendered
-  conversation; it does not upload or persist the transcript.
+  set to `true`. Export is explicit and downloads the current conversation as
+  JSON, with each turn's route ID, safety level, and available Chatflow debug
+  payload. It does not upload the transcript.
 - `NEXT_PUBLIC_ENABLE_CHAT_DEBUG`: shows a developer-only toggle that requests
   structured Chatflow debug metadata, plus Router and answer-model selectors
   populated from the backend's `/v1/config/models` allowlists. Leaving either

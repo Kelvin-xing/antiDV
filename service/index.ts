@@ -4,6 +4,9 @@ import { ApiError, apiRequest, streamSSE } from './base'
 interface ConversationTurn {
   user: string
   assistant: string
+  route_id: string
+  safety_level: string
+  debug?: ChatDebugPayload | null
 }
 
 interface ConversationView {
@@ -95,10 +98,13 @@ interface ConversationsResponse {
   limit: number
 }
 
-interface ChatHistoryItem {
+export interface ChatHistoryItem {
   id: string
   query: string
   answer: string
+  route_id: string
+  safety_level: string
+  debug: ChatDebugPayload | null
   message_files: never[]
   feedback: null
 }
@@ -260,6 +266,9 @@ export const fetchChatList = async (
       id: `turn-${index}`,
       query: turn.user,
       answer: turn.assistant,
+      route_id: turn.route_id,
+      safety_level: turn.safety_level,
+      debug: turn.debug ?? null,
       message_files: [],
       feedback: null,
     })),
