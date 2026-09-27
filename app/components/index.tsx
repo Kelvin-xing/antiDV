@@ -9,7 +9,8 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import Header from '@/app/components/header'
 import { deleteConversation, fetchAppParams, fetchChatList, fetchChatModelConfig, fetchConversations, sendChatMessage } from '@/service'
-import type { ChatDebugPayload, ChatHistoryItem, ChatModelConfig } from '@/service'
+import type { ChatDebugPayload, ChatHistoryItem, ChatModelConfig, SendChatBody } from '@/service'
+import { SERVICE_UNAVAILABLE_MESSAGE } from '@/service/base'
 import type { ChatItem, ConversationItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod } from '@/types/app'
@@ -33,6 +34,14 @@ const formatTiming = (value: number | null) => {
 
 export interface IMainProps {
   params: any
+}
+
+interface ActiveResponse {
+  controller: AbortController | null
+  questionId: string
+  placeholderAnswerId: string
+  responseId: string
+  completed: boolean
 }
 
 const Main: FC<IMainProps> = () => {
@@ -78,6 +87,7 @@ const Main: FC<IMainProps> = () => {
     conversationList,
     setConversationList,
     currConversationId,
+    getCurrConversationId,
     setCurrConversationId,
     isNewConversation,
     currConversationInfo,
@@ -120,7 +130,9 @@ const Main: FC<IMainProps> = () => {
 
     // update chat list of current conversation
     if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding) {
+      const epoch = conversationEpoch.current
       fetchChatList(currConversationId).then((res: any) => {
+        if (epoch !== conversationEpoch.current || activeResponse.current) { return }
         const { data } = res
         const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
 
@@ -141,6 +153,9 @@ const Main: FC<IMainProps> = () => {
           })
         })
         setChatList(newChatList)
+      }).catch(() => {
+        if (epoch === conversationEpoch.current)
+          { notify({ type: 'error', message: '加载对话失败，请稍后重试' }) }
       })
     }
 
@@ -149,6 +164,9 @@ const Main: FC<IMainProps> = () => {
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
   const handleConversationIdChange = (id: string) => {
+    conversationEpoch.current += 1
+    cancelActiveResponse()
+    setFailedMessage(null)
     setLatestChatDebug(null)
     if (id === '-1') {
       createNewChat()
@@ -159,6 +177,7 @@ const Main: FC<IMainProps> = () => {
     }
     // trigger handleConversationSwitch
     setCurrConversationId(id, APP_ID)
+    if (id === '-1') { setChatList(generateNewChatListWithOpenStatement()) }
     hideSidebar()
   }
 
@@ -276,7 +295,9 @@ const Main: FC<IMainProps> = () => {
   }, [])
 
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
-  const activeResponseController = useRef<AbortController | null>(null)
+  const activeResponse = useRef<ActiveResponse | null>(null)
+  const conversationEpoch = useRef(0)
+  const [failedMessage, setFailedMessage] = useState<SendChatBody | null>(null)
   const { notify } = Toast
   useEffect(() => {
     if (!chatDebugAvailable) { return }
@@ -299,7 +320,10 @@ const Main: FC<IMainProps> = () => {
     }
   }, [])
   useEffect(() => () => {
-    activeResponseController.current?.abort()
+    conversationEpoch.current += 1
+    const request = activeResponse.current
+    activeResponse.current = null
+    request?.controller?.abort()
   }, [])
 
   const logError = (message: string) => {
@@ -345,22 +369,43 @@ const Main: FC<IMainProps> = () => {
     setChatList(newListWithAnswer)
   }
 
-  const handleStopResponse = () => {
-    activeResponseController.current?.abort()
+  const removePendingResponse = (request: ActiveResponse) => {
+    setChatList(getChatList().filter(item =>
+      item.id !== request.questionId
+      && item.id !== request.placeholderAnswerId
+      && item.id !== request.responseId,
+    ))
   }
 
-  const handleSend = async (message: string, _files?: VisionFile[]) => {
-    if (isResponding) {
+  const cancelActiveResponse = () => {
+    const request = activeResponse.current
+    activeResponse.current = null
+    request?.controller?.abort()
+    if (request && !request.completed) { removePendingResponse(request) }
+    setRespondingFalse()
+  }
+
+  const handleStopResponse = () => {
+    if (activeResponse.current?.completed) { return }
+    cancelActiveResponse()
+    setFailedMessage(null)
+    setLatestChatDebug(null)
+    notify({ type: 'info', message: '已停止生成，本轮消息未保存' })
+  }
+
+  const handleSend = async (message: string, _files?: VisionFile[], retry?: SendChatBody) => {
+    if (activeResponse.current || isResponding) {
       notify({ type: 'info', message: t('app.errorMessage.waitForResponse') })
       return
     }
-    const data = {
+    const data: SendChatBody = retry ? { ...retry } : {
       query: message,
-      conversation_id: isNewConversation ? null : currConversationId,
+      conversation_id: failedMessage?.conversation_id || (isNewConversation ? null : currConversationId),
       debug: chatDebugAvailable && chatDebugEnabled,
       router_model: routerModel || undefined,
       response_model: responseModel || undefined,
     }
+    setFailedMessage(null)
     if (chatDebugEnabled) { setLatestChatDebug(null) }
 
     // question
@@ -392,23 +437,44 @@ const Main: FC<IMainProps> = () => {
     let hasSetResponseId = false
 
     let tempNewConversationId = ''
+    const request: ActiveResponse = {
+      controller: null,
+      questionId,
+      placeholderAnswerId,
+      responseId: responseItem.id,
+      completed: false,
+    }
+    // Do not let an older history load replace this turn after it finishes.
+    conversationEpoch.current += 1
+    const epoch = conversationEpoch.current
+    const isCurrentRequest = () => activeResponse.current === request && epoch === conversationEpoch.current
+    activeResponse.current = request
 
     setRespondingTrue()
     sendChatMessage(data, {
       getAbortController(controller) {
-        activeResponseController.current = controller
+        request.controller = controller
+      },
+      onConversationCreated(conversationId) {
+        if (!isCurrentRequest()) { return }
+        data.conversation_id = conversationId
       },
       onStarted({ conversationId: newConversationId, messageId }) {
+        if (!isCurrentRequest()) { return }
         tempNewConversationId = newConversationId
+        data.conversation_id = newConversationId
         if (!hasSetResponseId) {
           responseItem.id = messageId
+          request.responseId = messageId
           hasSetResponseId = true
         }
       },
       onData: (response, _isFirstMessage, { conversationId: newConversationId, messageId }) => {
+        if (!isCurrentRequest()) { return }
         responseItem.content += response
         if (messageId && !hasSetResponseId) {
           responseItem.id = messageId
+          request.responseId = messageId
           hasSetResponseId = true
         }
 
@@ -421,45 +487,45 @@ const Main: FC<IMainProps> = () => {
         })
       },
       onDebug(debug) {
+        if (!isCurrentRequest()) { return }
         setLatestChatDebug(debug)
       },
       async onCompleted() {
-        activeResponseController.current = null
+        if (!isCurrentRequest()) { return }
+        request.completed = true
         setCurrConversationId(tempNewConversationId, APP_ID, false)
         try {
           const { data: allConversations } = await fetchConversations()
+          if (!isCurrentRequest()) { return }
           setConversationList(allConversations)
         }
         catch {
-          notify({ type: 'error', message: '对话已回复，但会话列表刷新失败' })
+          if (isCurrentRequest())
+            { notify({ type: 'error', message: '对话已回复，但会话列表刷新失败' }) }
         }
         finally {
-          setConversationIdChangeBecauseOfNew(false)
-          resetNewConversationInputs()
-          setRespondingFalse()
+          if (isCurrentRequest()) {
+            activeResponse.current = null
+            setConversationIdChangeBecauseOfNew(false)
+            resetNewConversationInputs()
+            setRespondingFalse()
+          }
         }
       },
       onError(message, code) {
-        activeResponseController.current = null
+        if (!isCurrentRequest()) { return }
+        activeResponse.current = null
         setRespondingFalse()
-        notify({
-          type: code === 'aborted' ? 'info' : 'error',
-          message: code === 'aborted' ? `${message}，本轮消息未保存` : message,
-        })
-        const failedResponseId = responseItem.id
-        setChatList(
-          getChatList().filter(item =>
-            item.id !== questionId
-            && item.id !== placeholderAnswerId
-            && item.id !== failedResponseId,
-          ),
-        )
+        setLatestChatDebug(null)
+        removePendingResponse(request)
+        if (code === 'service_unavailable') { setFailedMessage({ ...data }) }
+        else if (code !== 'aborted') { notify({ type: 'error', message }) }
       },
     })
   }
 
   const handleExport = async () => {
-    if (isResponding) {
+    if (activeResponse.current || isResponding) {
       notify({ type: 'info', message: '请等待当前回答完成后再导出' })
       return
     }
@@ -468,6 +534,7 @@ const Main: FC<IMainProps> = () => {
       return
     }
 
+    const epoch = conversationEpoch.current
     let turns: ChatHistoryItem[]
     try {
       const response = await fetchChatList(currConversationId)
@@ -477,6 +544,7 @@ const Main: FC<IMainProps> = () => {
       notify({ type: 'error', message: '导出聊天记录失败，请稍后重试' })
       return
     }
+    if (epoch !== conversationEpoch.current) { return }
     if (turns.length === 0) {
       notify({ type: 'info', message: '当前对话没有内容可导出' })
       return
@@ -512,6 +580,13 @@ const Main: FC<IMainProps> = () => {
   }
 
   const handleDeleteConversation = async (id: string) => {
+    if (getCurrConversationId() === id) {
+      conversationEpoch.current += 1
+      cancelActiveResponse()
+      setFailedMessage(null)
+      setLatestChatDebug(null)
+    }
+    const epoch = conversationEpoch.current
     try {
       await deleteConversation(id)
     }
@@ -519,15 +594,21 @@ const Main: FC<IMainProps> = () => {
       notify({ type: 'error', message: '清除对话失败，请稍后重试' })
       return
     }
+    if (epoch !== conversationEpoch.current) { return }
     const remaining = conversationList.filter(item => item.id !== id)
     setConversationList(remaining)
-    if (currConversationId === id) {
+    if (getCurrConversationId() === id) {
       const next = remaining.find(item => item.id !== '-1')
       setCurrConversationId(next ? next.id : '-1', APP_ID)
     }
   }
 
   const handleClearAll = async () => {
+    conversationEpoch.current += 1
+    cancelActiveResponse()
+    setFailedMessage(null)
+    setLatestChatDebug(null)
+    const epoch = conversationEpoch.current
     const realConversations = conversationList.filter(item => item.id !== '-1')
     try {
       await Promise.all(realConversations.map(item => deleteConversation(item.id)))
@@ -536,8 +617,10 @@ const Main: FC<IMainProps> = () => {
       notify({ type: 'error', message: '清除对话失败，请稍后重试' })
       return
     }
+    if (epoch !== conversationEpoch.current) { return }
     setConversationList([])
     setCurrConversationId('-1', APP_ID)
+    setChatList(generateNewChatListWithOpenStatement())
   }
 
   const accumulatedAIText = useMemo(() => {
@@ -688,7 +771,25 @@ const Main: FC<IMainProps> = () => {
                 fileConfig={fileConfig}
                 inputLeft={inputLeft}
                 inputRight={inputRight}
-                afterMessages={chatDebugAvailable && chatDebugEnabled && latestChatDebug
+                afterMessages={<>
+                  {failedMessage && (
+                    <div
+                      role="alert"
+                      data-testid="chat-service-error"
+                      className="mx-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-gray-700"
+                    >
+                      <p>{SERVICE_UNAVAILABLE_MESSAGE}</p>
+                      <button
+                        type="button"
+                        className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-950 disabled:opacity-50"
+                        disabled={isResponding}
+                        onClick={() => handleSend(failedMessage.query, undefined, failedMessage)}
+                      >
+                        重试
+                      </button>
+                    </div>
+                  )}
+                  {chatDebugAvailable && chatDebugEnabled && latestChatDebug
                   ? (
                       <section
                         data-testid="chat-debug-panel"
@@ -766,6 +867,7 @@ const Main: FC<IMainProps> = () => {
                       </section>
                     )
                   : null}
+                </>}
               />
               {/* Export button */}
               {debugExportEnabled && chatList.filter(i => !i.isOpeningStatement).length > 0 && (

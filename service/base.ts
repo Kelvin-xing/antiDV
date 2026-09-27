@@ -1,13 +1,39 @@
 import { API_PREFIX } from '@/config'
 
+export const SERVICE_UNAVAILABLE_MESSAGE = '小安暂时无法提供服务，请稍后重试'
+
 export class ApiError extends Error {
   status: number
+  code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
+}
+
+async function readApiError(response: Response): Promise<ApiError> {
+  let message = `请求失败 (${response.status})`
+  let code: string | undefined
+  try {
+    const body = await response.json()
+    if (typeof body?.detail === 'string')
+      { message = body.detail }
+    else if (body?.detail && typeof body.detail === 'object') {
+      if (typeof body.detail.code === 'string')
+        { code = body.detail.code }
+      if (typeof body.detail.message === 'string')
+        { message = body.detail.message }
+    }
+  }
+  catch {
+    // A same-origin proxy may return HTML or plain text instead of JSON.
+  }
+  if (response.status >= 500 || code === 'service_unavailable' || code === 'generation_failed')
+    { return new ApiError(response.status, SERVICE_UNAVAILABLE_MESSAGE, 'service_unavailable') }
+  return new ApiError(response.status, message, code)
 }
 
 interface ApiRequestInit extends RequestInit {
@@ -26,6 +52,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const requestController = new AbortController()
   const abortRequest = () => requestController.abort()
+  signal?.throwIfAborted()
   signal?.addEventListener('abort', abortRequest, { once: true })
   let timedOut = false
   const timeout = window.setTimeout(() => {
@@ -45,19 +72,8 @@ export async function apiRequest<T>(
       },
     })
 
-    if (!response.ok) {
-      let message = `请求失败 (${response.status})`
-      try {
-        const body = await response.json()
-        if (typeof body.detail === 'string') {
-          message = body.detail
-        }
-      }
-      catch {
-        // Keep the status-based message for non-JSON errors.
-      }
-      throw new ApiError(response.status, message)
-    }
+    if (!response.ok)
+      { throw await readApiError(response) }
 
     if (response.status === 204) {
       return undefined as T
@@ -102,7 +118,7 @@ function findLineEnding(
 
 async function consumeEventStream(
   body: ReadableStream<Uint8Array>,
-  onEvent: (event: ServerSentEvent) => void,
+  onEvent: (event: ServerSentEvent) => void | boolean,
   onActivity?: () => void,
 ): Promise<void> {
   const reader = body.getReader()
@@ -111,15 +127,17 @@ async function consumeEventStream(
   let eventName = ''
   let eventId = ''
   let dataLines: string[] = []
+  let finished = false
+  let failure: { error: unknown } | undefined
 
   const processLine = (line: string) => {
     if (line === '') {
       if (dataLines.length) {
-        onEvent({
+        finished = onEvent({
           event: eventName || 'message',
           data: dataLines.join('\n'),
           id: eventId,
-        })
+        }) === false
       }
       eventName = ''
       dataLines = []
@@ -144,13 +162,15 @@ async function consumeEventStream(
 
   const processBuffer = (endOfStream: boolean) => {
     while (buffer) {
+      if (finished)
+        { break }
       const lineEnding = findLineEnding(buffer, endOfStream)
       if (!lineEnding)
         { break }
       processLine(buffer.slice(0, lineEnding.index))
       buffer = buffer.slice(lineEnding.index + lineEnding.length)
     }
-    if (endOfStream && buffer) {
+    if (endOfStream && buffer && !finished) {
       processLine(buffer)
       buffer = ''
     }
@@ -158,6 +178,8 @@ async function consumeEventStream(
 
   try {
     while (true) {
+      if (finished)
+        { break }
       const { value, done } = await reader.read()
       if (done)
         { break }
@@ -168,15 +190,27 @@ async function consumeEventStream(
     buffer += decoder.decode()
     processBuffer(true)
   }
+  catch (error) {
+    failure = { error }
+  }
+  try {
+    await reader.cancel()
+  }
+  catch (error) {
+    // Cancellation can reject with the read error; preserve that primary failure.
+    failure ??= { error }
+  }
   finally {
     reader.releaseLock()
   }
+  if (failure)
+    { throw failure.error }
 }
 
 export async function streamSSE(
   path: string,
   init: RequestInit,
-  onEvent: (event: ServerSentEvent) => void,
+  onEvent: (event: ServerSentEvent) => void | boolean,
   onActivity?: () => void,
 ): Promise<void> {
   const response = await fetch(`${API_PREFIX}${path}`, {
@@ -190,7 +224,7 @@ export async function streamSSE(
   })
 
   if (!response.ok)
-    { throw new ApiError(response.status, `请求失败 (${response.status})`) }
+    { throw await readApiError(response) }
 
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.toLowerCase().startsWith('text/event-stream'))

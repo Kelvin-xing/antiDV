@@ -1,5 +1,5 @@
 import type { ConversationItem } from '@/types/app'
-import { ApiError, apiRequest, streamSSE } from './base'
+import { ApiError, apiRequest, SERVICE_UNAVAILABLE_MESSAGE, streamSSE } from './base'
 
 interface ConversationTurn {
   user: string
@@ -25,7 +25,7 @@ interface ChatResponse {
   debug?: ChatDebugPayload | null
 }
 
-interface SendChatBody {
+export interface SendChatBody {
   query: string
   conversation_id?: string | null
   debug?: boolean
@@ -72,6 +72,7 @@ export interface ChatDebugPayload {
 }
 
 interface SendChatHandlers {
+  onConversationCreated?: (conversationId: string) => void
   onData: (
     message: string,
     isFirstMessage: boolean,
@@ -292,6 +293,8 @@ export const sendChatMessage = async (
         signal: controller.signal,
       })
       conversationId = created.conversation_id
+      controller.signal.throwIfAborted()
+      handlers.onConversationCreated?.(conversationId)
     }
 
     const responsePath = `/conversations/${encodeURIComponent(conversationId)}/responses`
@@ -329,6 +332,7 @@ export const sendChatMessage = async (
           body: requestBody,
         },
         (event) => {
+          controller.signal.throwIfAborted()
           const payload = readEventObject(event.data)
           if (event.event === 'start') {
             if (streamIdentity)
@@ -369,15 +373,13 @@ export const sendChatMessage = async (
           }
           else if (event.event === 'completed') {
             streamCompleted = true
+            return false
           }
           else if (event.event === 'debug') {
             handlers.onDebug?.(readChatDebugPayload(payload.debug))
           }
           else if (event.event === 'error') {
-            const message = typeof payload.message === 'string'
-              ? payload.message
-              : '生成回复失败，请稍后重试'
-            throw new ApiError(503, message)
+            throw new ApiError(503, SERVICE_UNAVAILABLE_MESSAGE, 'service_unavailable')
           }
         },
         resetInactivityTimer,
@@ -390,7 +392,9 @@ export const sendChatMessage = async (
       if (
         error instanceof ApiError
         && [404, 405, 406].includes(error.status)
+        && error.code !== 'service_unavailable'
         && !streamIdentity
+        && !controller.signal.aborted
       ) {
         resetInactivityTimer()
         const response = await apiRequest<ChatResponse>(responsePath, {
@@ -401,6 +405,7 @@ export const sendChatMessage = async (
           },
           body: requestBody,
         })
+        controller.signal.throwIfAborted()
         handlers.onStarted?.({
           conversationId: response.conversation_id,
           messageId: response.response_id,
@@ -426,6 +431,7 @@ export const sendChatMessage = async (
 
     if (!streamCompleted)
       { throw new Error('流式响应在完成事件之前中断') }
+    controller.signal.throwIfAborted()
     handlers.onCompleted()
   }
   catch (error) {
@@ -433,9 +439,17 @@ export const sendChatMessage = async (
       handlers.onError('已停止生成', 'aborted')
       return
     }
-    handlers.onError(
-      error instanceof Error ? error.message : '请求失败，请稍后重试',
-    )
+    if (
+      error instanceof ApiError
+      && error.status >= 400
+      && error.status < 500
+      && error.status !== 408
+      && error.code !== 'service_unavailable'
+    ) {
+      handlers.onError(error.message, 'request_error')
+      return
+    }
+    handlers.onError(SERVICE_UNAVAILABLE_MESSAGE, 'service_unavailable')
   }
 }
 
