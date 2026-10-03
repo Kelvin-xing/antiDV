@@ -88,7 +88,7 @@ interface SendChatHandlers {
     taskId: string
   }) => void
   onDebug?: (debug: ChatDebugPayload) => void
-  onCompleted: (hasError?: boolean) => void
+  onCompleted: (hasError?: boolean, result?: { safety_level?: string }) => void
   onError: (message: string, code?: string) => void
   getAbortController?: (controller: AbortController) => void
 }
@@ -306,6 +306,7 @@ export const sendChatMessage = async (
     })
     let streamIdentity: StreamIdentity | null = null
     let streamCompleted = false
+    let safetyLevel: string | undefined
     let firstDelta = true
     let inactivityTimedOut = false
     let inactivityTimer: number | undefined
@@ -372,6 +373,7 @@ export const sendChatMessage = async (
             }
           }
           else if (event.event === 'completed') {
+            safetyLevel = typeof payload.safety_level === 'string' ? payload.safety_level : undefined
             streamCompleted = true
             return false
           }
@@ -418,6 +420,7 @@ export const sendChatMessage = async (
         })
         if (response.debug)
           { handlers.onDebug?.(readChatDebugPayload(response.debug)) }
+        safetyLevel = response.safety_level
         streamCompleted = true
       }
       else {
@@ -432,7 +435,7 @@ export const sendChatMessage = async (
     if (!streamCompleted)
       { throw new Error('流式响应在完成事件之前中断') }
     controller.signal.throwIfAborted()
-    handlers.onCompleted()
+    handlers.onCompleted(false, { safety_level: safetyLevel })
   }
   catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

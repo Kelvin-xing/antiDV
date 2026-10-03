@@ -314,3 +314,20 @@ test('stream cleanup failures surface when there is no primary failure and relea
   await expect(streamSSE('/stream', {}, () => false)).rejects.toBe(cleanupError)
   expect(failingCleanup.locked).toBe(false)
 })
+
+for (const level of ['immediate_danger', 'self_harm', 'normal']) {
+  test(`completion exposes server safety level ${level} after successful SSE`, async () => {
+    mockResponses([stream(start + delta + event('completed', { safety_level: level }))])
+    const result = capture()
+    let received: unknown
+    await sendChatMessage(body, {
+      ...result.handlers,
+      onCompleted(hasError, metadata) {
+        expect(hasError).toBe(false)
+        received = metadata
+      },
+    })
+    expect(received).toEqual({ safety_level: level })
+    expect(result.errors).toEqual([])
+  })
+}
