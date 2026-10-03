@@ -22,6 +22,7 @@ interface ChatResponse {
   conversation_id: string
   response_id: string
   answer: string
+  safety_level?: string
   debug?: ChatDebugPayload | null
 }
 
