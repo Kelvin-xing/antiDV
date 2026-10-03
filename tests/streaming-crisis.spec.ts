@@ -108,7 +108,6 @@ async function emit(page: Page, index: number, name: string, payload: Record<str
   }, { index, name, payload })
 }
 
-
 async function complete(page: Page, safety = 'normal') {
   await emit(page, 0, 'completed', { safety_level: safety })
   await expect(page.getByRole('button', { name: '停止生成', exact: true })).toHaveCount(0)
