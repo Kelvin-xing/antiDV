@@ -5,7 +5,6 @@ import {
 } from 'react'
 import { useParams } from 'next/navigation'
 import produce from 'immer'
-import { v4 as uuid4 } from 'uuid'
 import { useTranslation } from 'react-i18next'
 import { noop } from 'lodash-es'
 import type { FileEntity, FileUpload, FileUploadConfigResponse } from './types'
@@ -27,8 +26,21 @@ import { useToastContext } from '@/app/components/base/toast'
 import { TransferMethod } from '@/types/app'
 import { formatFileSize } from '@/utils/format'
 
-const uploadRemoteFileInfo = () => {
-  console.log('TODO')
+const uuid4 = () => crypto.randomUUID()
+
+interface RemoteFileInfo {
+  id: string
+  name: string
+  mime_type: string
+  size: number
+  url: string
+}
+
+const uploadRemoteFileInfo = async (
+  _url: string,
+  _isPublic: boolean,
+): Promise<RemoteFileInfo> => {
+  throw new Error('当前版本暂不支持远程附件')
 }
 
 export const useFileSizeLimit = (fileUploadConfig?: FileUploadConfigResponse) => {

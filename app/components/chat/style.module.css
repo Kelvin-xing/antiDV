@@ -86,6 +86,26 @@
   background-color: #EBF5FF;
 }
 
+.stopBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background-color: #F5E6D3;
+}
+
+.stopBtn::before {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: #8A5A44;
+  content: '';
+}
+
+.stopBtn:hover {
+  background-color: #EFD8C0;
+}
+
 .textArea:focus+div .count {
   display: block;
 }

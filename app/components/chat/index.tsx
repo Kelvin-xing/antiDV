@@ -27,6 +27,7 @@ export interface IChatProps {
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
   onSend?: (message: string, files: VisionFile[]) => void
+  onStop?: () => void
   useCurrentUserAvatar?: boolean
   isResponding?: boolean
   controlClearQuery?: number
@@ -36,6 +37,7 @@ export interface IChatProps {
   onReview?: (messageId: string, review: { score: number; comment: string }) => void
   inputLeft?: number
   inputRight?: number
+  afterMessages?: React.ReactNode
 }
 
 const Chat: FC<IChatProps> = ({
@@ -45,6 +47,7 @@ const Chat: FC<IChatProps> = ({
   onFeedback,
   checkCanSend,
   onSend = () => { },
+  onStop,
   useCurrentUserAvatar,
   isResponding,
   controlClearQuery,
@@ -54,6 +57,7 @@ const Chat: FC<IChatProps> = ({
   onReview,
   inputLeft,
   inputRight,
+  afterMessages,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -202,6 +206,7 @@ const Chat: FC<IChatProps> = ({
             />
           )
         })}
+        {afterMessages}
       </div>
       {
         !isHideSendInput && (
@@ -312,22 +317,36 @@ const Chat: FC<IChatProps> = ({
               />
               <div className="absolute bottom-2 right-6 flex items-center h-8">
                 <div className={`${s.count} mr-3 h-5 leading-5 text-sm bg-gray-50 text-gray-500 px-2 rounded`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
-                  }
-                >
-                  <div
-                    className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`}
-                    style={{ touchAction: 'manipulation' }}
-                    onClick={handleSend}
-                    onPointerDown={(e) => { e.preventDefault(); handleSend() }}
-                  ></div>
-                </Tooltip>
+                {isResponding
+                  ? (
+                      <Tooltip selector='stop-tip' htmlContent={<div>停止生成</div>}>
+                        <button
+                          type='button'
+                          aria-label='停止生成'
+                          className={`${s.stopBtn} w-8 h-8 cursor-pointer rounded-md`}
+                          style={{ touchAction: 'manipulation' }}
+                          onClick={onStop}
+                        />
+                      </Tooltip>
+                    )
+                  : (
+                      <Tooltip
+                        selector='send-tip'
+                        htmlContent={
+                          <div>
+                            <div>{t('common.operation.send')} Enter</div>
+                            <div>{t('common.operation.lineBreak')} Shift Enter</div>
+                          </div>
+                        }
+                      >
+                        <div
+                          className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`}
+                          style={{ touchAction: 'manipulation' }}
+                          onClick={handleSend}
+                          onPointerDown={(e) => { e.preventDefault(); handleSend() }}
+                        ></div>
+                      </Tooltip>
+                    )}
               </div>
             </div>
           </div>

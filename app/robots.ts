@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
             {
                 userAgent: '*',
                 allow: '/',
-                disallow: ['/feedback', '/chat', '/api/'],
+                disallow: ['/chat', '/api/', '/v1/'],
             },
             // AI training crawlers: block entirely to protect survivor conversations
             {
