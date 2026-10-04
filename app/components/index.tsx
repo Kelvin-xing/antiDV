@@ -1,5 +1,8 @@
 'use client'
 import type { FC } from 'react'
+import { useRouter } from 'next/navigation'
+import CrisisDialog from '@/app/components/crisis-dialog'
+import { createStreamRenderer } from '@/utils/stream-renderer'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce from 'immer'
@@ -42,10 +45,13 @@ interface ActiveResponse {
   placeholderAnswerId: string
   responseId: string
   completed: boolean
+  renderer?: ReturnType<typeof createStreamRenderer>
 }
 
 const Main: FC<IMainProps> = () => {
   const { t } = useTranslation()
+  const router = useRouter()
+  const [crisisResponseId, setCrisisResponseId] = useState<string | null>(null)
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const isDesktop = media === MediaType.pc
@@ -323,6 +329,7 @@ const Main: FC<IMainProps> = () => {
     conversationEpoch.current += 1
     const request = activeResponse.current
     activeResponse.current = null
+    request?.renderer?.cancel()
     request?.controller?.abort()
   }, [])
 
@@ -335,11 +342,13 @@ const Main: FC<IMainProps> = () => {
 
     if (!currInputs || !promptConfig?.prompt_variables) { return true }
 
-    const inputLens = Object.values(currInputs).length
-    const promptVariablesLens = promptConfig.prompt_variables.length
+    let emptyRequiredInput = false
+    promptConfig.prompt_variables.forEach((item) => {
+      if (item.required && !currInputs[item.key])
+        emptyRequiredInput = true
+    })
 
-    const emptyInput = inputLens < promptVariablesLens || Object.values(currInputs).find(v => !v)
-    if (emptyInput) {
+    if (emptyRequiredInput) {
       logError(t('app.errorMessage.valueOfVarRequired'))
       return false
     }
@@ -378,8 +387,10 @@ const Main: FC<IMainProps> = () => {
   }
 
   const cancelActiveResponse = () => {
+    setCrisisResponseId(null)
     const request = activeResponse.current
     activeResponse.current = null
+    request?.renderer?.cancel()
     request?.controller?.abort()
     if (request && !request.completed) { removePendingResponse(request) }
     setRespondingFalse()
@@ -449,6 +460,11 @@ const Main: FC<IMainProps> = () => {
     const epoch = conversationEpoch.current
     const isCurrentRequest = () => activeResponse.current === request && epoch === conversationEpoch.current
     activeResponse.current = request
+    request.renderer = createStreamRenderer((text) => {
+      if (!isCurrentRequest()) { return }
+      responseItem.content += text
+      updateCurrentQA({ responseItem, questionId, placeholderAnswerId, questionItem })
+    })
 
     setRespondingTrue()
     sendChatMessage(data, {
@@ -471,7 +487,6 @@ const Main: FC<IMainProps> = () => {
       },
       onData: (response, _isFirstMessage, { conversationId: newConversationId, messageId }) => {
         if (!isCurrentRequest()) { return }
-        responseItem.content += response
         if (messageId && !hasSetResponseId) {
           responseItem.id = messageId
           request.responseId = messageId
@@ -479,20 +494,17 @@ const Main: FC<IMainProps> = () => {
         }
 
         tempNewConversationId = newConversationId
-        updateCurrentQA({
-          responseItem,
-          questionId,
-          placeholderAnswerId,
-          questionItem,
-        })
+        request.renderer?.push(response)
       },
       onDebug(debug) {
         if (!isCurrentRequest()) { return }
         setLatestChatDebug(debug)
       },
-      async onCompleted() {
-        if (!isCurrentRequest()) { return }
+      async onCompleted(_hasError, result) {
+        if (!isCurrentRequest() || request.completed) { return }
         request.completed = true
+        await request.renderer?.finish()
+        if (!isCurrentRequest()) { return }
         setCurrConversationId(tempNewConversationId, APP_ID, false)
         try {
           const { data: allConversations } = await fetchConversations()
@@ -509,11 +521,14 @@ const Main: FC<IMainProps> = () => {
             setConversationIdChangeBecauseOfNew(false)
             resetNewConversationInputs()
             setRespondingFalse()
+            if (result?.safety_level === 'immediate_danger' || result?.safety_level === 'self_harm')
+              { setCrisisResponseId(request.responseId) }
           }
         }
       },
       onError(message, code) {
         if (!isCurrentRequest()) { return }
+        request.renderer?.cancel()
         activeResponse.current = null
         setRespondingFalse()
         setLatestChatDebug(null)
@@ -898,6 +913,17 @@ const Main: FC<IMainProps> = () => {
           )}
         </div>
       </div>
+      {crisisResponseId && <CrisisDialog
+        onContinue={() => {
+          setCrisisResponseId(null)
+          requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('textarea')?.focus())
+        }}
+        onExit={() => {
+          conversationEpoch.current += 1
+          cancelActiveResponse()
+          router.push('/safety-pack')
+        }}
+      />}
       {/* Mobile resource panel overlay */}
       {!isDesktop && (
         <ResourcePanel
