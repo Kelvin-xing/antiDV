@@ -59,8 +59,8 @@ const Sidebar: FC<ISidebarProps> = ({
     <div
       className="shrink-0 flex flex-col tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
       style={{
-        width: isCollapsed ? 48 : undefined,
-        flexBasis: isCollapsed ? 48 : undefined,
+        width: isCollapsed ? 48 : 244,
+        flexBasis: isCollapsed ? 48 : 244,
         backgroundColor: '#FAF6F2',
         borderRight: '1px solid #E6DDD5',
         transition: 'width 200ms ease-out',
@@ -74,17 +74,10 @@ const Sidebar: FC<ISidebarProps> = ({
           aria-label={isCollapsed ? '展开左边栏' : '收起左边栏'}
           title={isCollapsed ? '展开' : '收起'}
           style={{
-            width: 24,
-            height: 24,
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: '#B5A898',
-            borderRadius: 4,
+            width: 24, height: 24, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#B5A898', borderRadius: 4,
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -96,13 +89,10 @@ const Sidebar: FC<ISidebarProps> = ({
         </button>
         {!isCollapsed && (
           <h2 style={{
-            fontFamily: '\'Noto Serif SC\', serif',
-            fontSize: 15,
-            fontWeight: 600,
-            color: '#3D3028',
-            margin: 0,
+            fontFamily: "'Noto Serif SC', serif",
+            fontSize: 15, fontWeight: 600, color: '#3D3028', margin: 0,
           }}>
-            本次会话
+            历史对话
           </h2>
         )}
       </div>
@@ -124,7 +114,7 @@ const Sidebar: FC<ISidebarProps> = ({
               onClick={() => setConfirmClearAll(true)}
               className="flex-shrink-0 h-9 px-2 rounded-lg text-xs transition-colors"
               style={{ backgroundColor: '#F5E6D3', color: '#C26F3A' }}
-              title="清除本次会话"
+              title="清空全部对话"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
@@ -137,7 +127,7 @@ const Sidebar: FC<ISidebarProps> = ({
             className="mx-4 mt-3 rounded-lg p-3 text-xs"
             style={{ backgroundColor: '#FFF3CD', border: '1px solid #FFCC80', color: '#7B5800' }}
           >
-            <p className="font-medium mb-2">确定清除本次会话？此操作无法撤销。</p>
+            <p className="font-medium mb-2">确定清空全部对话？此操作无法撤销。</p>
             <div className="flex gap-2">
               <button
                 onClick={() => { onClearAll(); setConfirmClearAll(false) }}
@@ -218,6 +208,7 @@ const Sidebar: FC<ISidebarProps> = ({
         <div className="flex flex-shrink-0 pr-4 pb-4 pl-4">
           <div className="font-normal text-xs" style={{ color: '#B5A898' }}>© {copyRight} {(new Date()).getFullYear()}</div>
         </div>
+
       </>
       }
     </div>

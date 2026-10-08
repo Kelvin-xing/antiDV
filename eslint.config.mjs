@@ -49,6 +49,11 @@ export default combine(
       'style/arrow-parens': 'off',
       'style/eol-last': 'off',
       'style/no-trailing-spaces': 'off',
+      // Super-Linter runs ESLint without Next's TypeScript path resolver.
+      'n/no-missing-import': 'off',
+      'n/no-unsupported-features/node-builtins': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
 

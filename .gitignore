@@ -49,8 +49,7 @@ yarn.lock
 
 # mcp
 .serena
-# pmpm
-pnpm-lock.yaml
+# pnpm lockfile is tracked for reproducible container installs
 
 # feedback data (server-side)
 .feedback-data/

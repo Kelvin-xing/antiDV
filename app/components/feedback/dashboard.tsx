@@ -1,0 +1,93 @@
+'use client'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+interface Summary { id: string, userId: string | null, turnCount: number, reviewCount: number }
+interface Turn { number: number, responseId: string, question: string, answer: string, score: number | null, comment: string | null }
+interface Page<T> { items: T[], nextOffset: number | null }
+
+export default function FeedbackDashboard() {
+  const [conversations, setConversations] = useState<Page<Summary>>({ items: [], nextOffset: null })
+  const [turns, setTurns] = useState<Page<Turn>>({ items: [], nextOffset: null })
+  const [selected, setSelected] = useState('')
+  const [listOffset, setListOffset] = useState(0)
+  const [turnOffset, setTurnOffset] = useState(0)
+  const [version, setVersion] = useState(0)
+  const [error, setError] = useState('')
+  const [loadingList, setLoadingList] = useState(false)
+  const [loadingTurns, setLoadingTurns] = useState(false)
+  useEffect(() => {
+    const abort = new AbortController()
+    setLoadingList(true)
+    setConversations({ items: [], nextOffset: null })
+    setError('')
+    fetch(`/api/feedback?offset=${listOffset}`, { cache: 'no-store', signal: abort.signal })
+      .then(async (response) => {
+        if (!response.ok) { throw new Error(response.status === 403 ? '无管理员权限' : '记录读取失败，请重试') }
+        const data = await response.json()
+        if (!abort.signal.aborted) { setConversations(data) }
+      })
+      .catch((err) => { if (!abort.signal.aborted) { setError(err.message) } })
+      .finally(() => { if (!abort.signal.aborted) { setLoadingList(false) } })
+    return () => abort.abort()
+  }, [listOffset, version])
+  useEffect(() => {
+    setTurns({ items: [], nextOffset: null })
+    if (!selected) { return }
+    const abort = new AbortController()
+    setLoadingTurns(true)
+    setError('')
+    fetch(`/api/feedback?conversationId=${encodeURIComponent(selected)}&offset=${turnOffset}`, { cache: 'no-store', signal: abort.signal })
+      .then(async (response) => {
+        if (!response.ok) { throw new Error(response.status === 403 ? '无管理员权限' : '对话读取失败，请重试') }
+        const data = await response.json()
+        if (!abort.signal.aborted) { setTurns(data) }
+      })
+      .catch((err) => { if (!abort.signal.aborted) { setError(err.message) } })
+      .finally(() => { if (!abort.signal.aborted) { setLoadingTurns(false) } })
+    return () => abort.abort()
+  }, [selected, turnOffset, version])
+  const button = 'rounded border border-gray-300 px-3 py-2 text-sm disabled:opacity-40 focus-visible:outline focus-visible:outline-2'
+  return <main className='min-h-screen bg-[#FBF8F4] p-6 text-gray-900'>
+    <div className='mb-6 flex flex-wrap items-center gap-5'>
+      <h1 className='text-xl font-semibold'>小安 · 对话与反馈管理</h1>
+      <Link href='/chat' className='underline'>回到聊天</Link>
+      <button type='button' className={button} onClick={() => setVersion(v => v + 1)}>刷新</button>
+    </div>
+    {error && <p role='alert' className='mb-4 text-red-700'>{error}</p>}
+    <div className='grid gap-6 md:grid-cols-[280px_1fr]'>
+      <section aria-label='会话列表'>
+        {loadingList ? <p role='status'>正在读取…</p> : !conversations.items.length && <p>暂无可查看会话</p>}
+        <ul className='space-y-2'>{conversations.items.map(item => <li key={item.id}>
+          <button type='button' className={`${button} w-full text-left ${selected === item.id ? 'bg-orange-100' : 'bg-white'}`} onClick={() => { setSelected(item.id); setTurnOffset(0) }}>
+            <span className='block break-all'>会话 {item.id.slice(0, 8)}</span>
+            <span className='block break-all text-xs'>{item.userId || '游客'}</span>
+            <span className='block text-xs'>{item.turnCount} 轮对话 · {item.reviewCount} 条评价</span>
+          </button>
+        </li>)}</ul>
+        <div className='mt-4 flex gap-3'>
+          <button type='button' className={button} disabled={loadingList || listOffset === 0} onClick={() => setListOffset(n => Math.max(0, n - 50))}>上一页</button>
+          <button type='button' className={button} disabled={loadingList || conversations.nextOffset === null} onClick={() => setListOffset(conversations.nextOffset!)}>下一页</button>
+        </div>
+      </section>
+      <section aria-label='对话与评价' className='min-w-0'>
+        {!selected && <p>选择会话以查看已完成回答和用户反馈。</p>}
+        {loadingTurns && <p role='status'>正在读取对话…</p>}
+        {selected && !loadingTurns && !turns.items.length && <p>本页没有已完成的对话轮次。</p>}
+        {turns.items.map(turn => <article key={turn.responseId} className='mb-5 rounded-lg border border-gray-200 bg-white p-4'>
+          <h2 className='font-semibold'>第 {turn.number} 轮</h2>
+          <p className='mt-3 whitespace-pre-wrap break-words'><strong>用户：</strong>{turn.question}</p>
+          <p className='mt-3 whitespace-pre-wrap break-words'><strong>小安：</strong>{turn.answer}</p>
+          <div className='mt-4 border-t pt-3'>
+            <p>{turn.score === null ? '尚未评价' : `用户评分：${turn.score} / 5`}</p>
+            {turn.comment && <p className='mt-2 whitespace-pre-wrap break-words'>改进建议：{turn.comment}</p>}
+          </div>
+        </article>)}
+        {selected && <div className='flex gap-3'>
+          <button type='button' className={button} disabled={loadingTurns || turnOffset === 0} onClick={() => setTurnOffset(n => Math.max(0, n - 50))}>前 50 轮</button>
+          <button type='button' className={button} disabled={loadingTurns || turns.nextOffset === null} onClick={() => setTurnOffset(turns.nextOffset!)}>后 50 轮</button>
+        </div>}
+      </section>
+    </div>
+  </main>
+}

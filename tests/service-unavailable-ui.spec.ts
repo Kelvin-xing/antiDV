@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { SERVICE_UNAVAILABLE_MESSAGE } from '@/service/base'
+const SERVICE_UNAVAILABLE_MESSAGE = '小安暂时无法提供服务，请稍后重试'
+
+test.skip(!process.env.CLERK_E2E_STORAGE_STATE, 'Requires a configured Clerk test account and authenticated storage state')
+test.use({ storageState: process.env.CLERK_E2E_STORAGE_STATE })
 
 interface TestTurn {
   user: string

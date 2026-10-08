@@ -1,5 +1,6 @@
 import type { AppInfo } from '@/types/app'
-export const APP_ID = 'xiaoan'
+// Public storage namespace only. Keep an existing value to preserve local history keys.
+export const APP_ID = process.env.NEXT_PUBLIC_APP_ID || 'xiaoan'
 export const APP_INFO: AppInfo = {
   title: '小安',
   description: '你不是一个人，小安在这里陪你',
@@ -12,7 +13,7 @@ export const APP_INFO: AppInfo = {
 export const isShowPrompt = false
 export const promptTemplate = 'I want you to act as a javascript console.'
 
-export const API_PREFIX = '/v1'
+export const API_PREFIX = '/api'
 
 export const LOCALE_COOKIE_NAME = 'locale'
 

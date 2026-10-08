@@ -1,6 +1,5 @@
 .answerIcon {
   position: relative;
-  background: url('/avatar.png');
   background-size: cover;
   background-position: center top;
   border-radius: 50%;
@@ -86,26 +85,6 @@
   background-color: #EBF5FF;
 }
 
-.stopBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background-color: #F5E6D3;
-}
-
-.stopBtn::before {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background-color: #8A5A44;
-  content: '';
-}
-
-.stopBtn:hover {
-  background-color: #EFD8C0;
-}
-
 .textArea:focus+div .count {
   display: block;
 }
@@ -113,3 +92,8 @@
 .textArea:focus+div .sendBtn {
   background-image: url(./icons/send-active.svg);
 }
+/* Rounded Figma bubbles do not use speech tails. */
+.answer::before, .question::before { display: none; }
+.answerWrap:focus-within .itemOperation { display: flex; }
+@media (hover: none) { .answerWrap .itemOperation { display: flex; } }
+/* stylelint-disable */

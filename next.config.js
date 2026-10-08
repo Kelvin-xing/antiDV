@@ -1,14 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    const backendOrigin = process.env.XIAOAN_API_ORIGIN || 'http://127.0.0.1:8000'
-    return [
-      {
-        source: '/v1/:path*',
-        destination: `${backendOrigin}/v1/:path*`,
-      },
-    ]
-  },
   productionBrowserSourceMaps: false, // enable browser source map generation during the production build
   // Configure pageExtensions to include md and mdx
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],

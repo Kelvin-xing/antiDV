@@ -1,108 +1,48 @@
 'use client'
-import React, { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ReviewModalProps {
-    messageId: string
-    existingReview?: { score: number; comment: string }
-    onSubmit: (messageId: string, review: { score: number; comment: string }) => void
-    onClose: () => void
+  messageId: string
+  existingReview?: { score: number, comment: string }
+  onSubmit: (messageId: string, review: { score: number, comment: string }) => Promise<void>
+  onClose: () => void
 }
 
-const StarIcon: React.FC<{ filled: boolean; onClick: () => void; onHover: () => void }> = ({ filled, onClick, onHover }) => (
-    <svg
-        className={`w-8 h-8 cursor-pointer transition-colors ${filled ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}
-        fill={filled ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        strokeWidth={1.5}
-        viewBox="0 0 24 24"
-        onClick={onClick}
-        onMouseEnter={onHover}
-    >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-    </svg>
-)
-
-const SCORE_LABELS: Record<number, string> = {
-    1: '非常差',
-    2: '较差',
-    3: '一般',
-    4: '较好',
-    5: '非常好',
+export default function ReviewModal({ messageId, existingReview, onSubmit, onClose }: ReviewModalProps) {
+  const [score, setScore] = useState(existingReview?.score ?? 0)
+  const [comment, setComment] = useState(existingReview?.comment ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const element = dialog.current
+    element?.showModal()
+    return () => element?.close()
+  }, [])
+  async function submit() {
+    if (!score || saving) { return }
+    setSaving(true)
+    setError('')
+    try { await onSubmit(messageId, { score, comment: comment.trim() }); onClose() }
+    catch (err) { setError(err instanceof Error ? err.message : '保存失败，请重试'); setSaving(false) }
+  }
+  return <dialog ref={dialog} onCancel={(event) => { event.preventDefault(); if (!saving) { onClose() } }} aria-labelledby='review-title' className='w-[min(90vw,400px)] rounded-xl bg-white p-6 text-gray-900 shadow-xl backdrop:bg-black/30'>
+    <h2 id='review-title' className='text-lg font-semibold'>评价小安的这条回答</h2>
+    <fieldset disabled={saving} className='mt-4'>
+      <legend>回答对你有多大帮助？</legend>
+      <div className='mt-2 flex gap-2'>{[1, 2, 3, 4, 5].map(value => <label key={value} className='flex cursor-pointer flex-col items-center gap-1 rounded border p-2'>
+        <input type='radio' name='score' value={value} checked={score === value} onChange={() => setScore(value)} />
+        <span>{value} 分</span>
+      </label>)}</div>
+      <p className='mt-2 text-xs text-gray-600'>1 分：没有帮助；5 分：非常有帮助</p>
+      <label htmlFor='review-comment' className='mt-4 block'>希望小安如何改进？（选填）</label>
+      <textarea id='review-comment' value={comment} onChange={event => setComment(event.target.value)} maxLength={500} rows={4} className='mt-2 w-full rounded border p-2' />
+      <p className='text-xs text-gray-600'>{comment.length}/500 字。评分及建议会供管理员改进服务使用。</p>
+    </fieldset>
+    {error && <p role='alert' className='mt-3 text-sm text-red-700'>{error}</p>}
+    <div className='mt-5 flex justify-end gap-4'>
+      <button type='button' disabled={saving} onClick={onClose} className='rounded border px-3 py-2'>取消</button>
+      <button type='button' disabled={!score || saving} onClick={() => void submit()} className='rounded bg-orange-800 px-3 py-2 text-white disabled:opacity-40'>{saving ? '正在保存…' : '保存评价'}</button>
+    </div>
+  </dialog>
 }
-
-const ReviewModal: React.FC<ReviewModalProps> = ({ messageId, existingReview, onSubmit, onClose }) => {
-    const [score, setScore] = useState(existingReview?.score ?? 0)
-    const [hoverScore, setHoverScore] = useState(0)
-    const [comment, setComment] = useState(existingReview?.comment ?? '')
-
-    const displayScore = hoverScore || score
-
-    const handleSubmit = () => {
-        if (score === 0) return
-        onSubmit(messageId, { score, comment: comment.trim() })
-        onClose()
-    }
-
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            onClick={onClose}
-        >
-            <div
-                className="bg-white rounded-2xl shadow-2xl p-6 w-80 flex flex-col gap-4"
-                onClick={e => e.stopPropagation()}
-            >
-                <h3 className="text-base font-semibold text-gray-800 text-center">评价此回复</h3>
-
-                {/* Stars */}
-                <div
-                    className="flex gap-1 justify-center"
-                    onMouseLeave={() => setHoverScore(0)}
-                >
-                    {[1, 2, 3, 4, 5].map(i => (
-                        <StarIcon
-                            key={i}
-                            filled={displayScore >= i}
-                            onClick={() => setScore(i)}
-                            onHover={() => setHoverScore(i)}
-                        />
-                    ))}
-                </div>
-
-                {/* Score label */}
-                <p className="text-center text-sm text-gray-500 -mt-2 h-4">
-                    {displayScore > 0 ? SCORE_LABELS[displayScore] : ''}
-                </p>
-
-                {/* Comment */}
-                <textarea
-                    className="w-full border border-gray-200 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    rows={3}
-                    placeholder="写下您的评论（选填，最多 500 字）"
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    maxLength={500}
-                />
-
-                <div className="flex gap-2 justify-end">
-                    <button
-                        className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300"
-                        onClick={onClose}
-                    >
-                        取消
-                    </button>
-                    <button
-                        className={`px-4 py-1.5 text-sm text-white rounded-lg transition-colors ${score > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
-                        onClick={handleSubmit}
-                        disabled={score === 0}
-                    >
-                        提交评价
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-export default ReviewModal
