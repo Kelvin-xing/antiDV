@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "service/index.ts",
+    "lib/backend.ts",
+    "app/api/utils/proxy.ts",
+    "app/v1/[...path]/route.ts",
+    "hooks/use-chatflow.ts",
+    "app/components/index.tsx",
+    "lib/auth/**/*.ts",
+    "lib/feedback/**/*.ts",
+    "app/api/reviews/route.ts",
+    "app/api/feedback/route.ts",
+    "app/api/session/clear/route.ts",
+    "app/components/account/**/*.tsx",
+    "app/components/feedback/**/*.tsx",
+    "app/feedback/page.tsx",
+    "app/chat/page.tsx",
+    "app/exit/page.tsx",
+    "app/sign-in/**/*.tsx",
+    "app/sign-up/**/*.tsx",
+    "middleware.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "temp_clone"
+  ]
+}

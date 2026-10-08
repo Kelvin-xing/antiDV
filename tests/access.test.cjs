@@ -1,0 +1,157 @@
+const { test, afterEach } = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const Module = require('node:module')
+const ts = require('typescript')
+const { NextRequest } = require('next/server')
+let authState, liveSession, user, token, queryRows, queryCalls, revoked, failClerk
+function reset() {
+  authState = { userId: 'user_alice', sessionId: 'sess_1', getToken: async () => token }
+  liveSession = { status: 'active', userId: 'user_alice' }
+  user = { publicMetadata: {}, banned: false, locked: false }
+  token = 'session-token'; queryRows = []; queryCalls = []; revoked = []; failClerk = false
+}
+reset()
+const db = { query: async (sql, values) => { queryCalls.push({ sql, values }); return { rows: queryRows } }, connect: async () => ({ query: db.query, release() {} }) }
+const clerk = {
+  sessions: {
+    getSession: async () => { if (failClerk) throw new Error('credential error'); return liveSession },
+    revokeSession: async id => { revoked.push(id); return {} },
+  },
+  users: { getUser: async () => user },
+}
+const cache = new Map()
+function load(file) {
+  const filename = path.resolve(__dirname, '..', file)
+  if (cache.has(filename)) return cache.get(filename).exports
+  const mod = new Module(filename, module)
+  cache.set(filename, mod)
+  mod.filename = filename
+  mod.paths = Module._nodeModulePaths(path.dirname(filename))
+  const originalRequire = mod.require.bind(mod)
+  mod.require = name => {
+    if (name === 'server-only') return {}
+    if (name === '@clerk/nextjs/server') return { auth: async () => authState, clerkClient: async () => clerk }
+    if (name === './database') return { feedbackDatabase: () => db }
+    if (name.startsWith('@/')) return load(`${name.slice(2)}.ts`)
+    if (name.startsWith('.')) return load(path.relative(path.resolve(__dirname, '..'), path.resolve(path.dirname(filename), name + '.ts')))
+    return originalRequire(name)
+  }
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, filename)
+  return mod.exports
+}
+const { requireActor } = load('lib/auth/server.ts')
+const { roleFromMetadata, assertAdmin } = load('lib/auth/policy.ts')
+const { validateReview } = load('lib/feedback/validation.ts')
+const repository = load('lib/feedback/repository.ts')
+const feedback = load('app/api/feedback/route.ts')
+const reviews = load('app/api/reviews/route.ts')
+const clear = load('app/api/session/clear/route.ts')
+const originalOrigin = process.env.FRONTEND_ORIGIN
+afterEach(() => { reset(); if (originalOrigin === undefined) delete process.env.FRONTEND_ORIGIN; else process.env.FRONTEND_ORIGIN = originalOrigin })
+const actor = { userId: 'user_alice', sessionId: 'sess_1', role: 'user', token: 'session-token' }
+function req(url, init = {}) { return new NextRequest(`https://site.example${url}`, init) }
+
+test('role is user by default; only exact server metadata admin grants access', () => {
+  for (const role of [undefined, 'Admin', true, 'org:admin', 'user']) assert.equal(roleFromMetadata({ role }), 'user')
+  assert.equal(roleFromMetadata({ role: 'admin' }), 'admin')
+  assert.throws(() => assertAdmin(actor), e => e.status === 403)
+})
+test('signed-out user has no actor', async () => {
+  authState = { userId: null, sessionId: null }
+  await assert.rejects(requireActor(), e => e.status === 401)
+})
+test('revoked session denied even if JWT still has user and session IDs', async () => {
+  liveSession.status = 'revoked'
+  await assert.rejects(requireActor(), e => e.status === 401)
+})
+test('session ownership mismatch and banned account denied', async () => {
+  liveSession.userId = 'user_bob'
+  await assert.rejects(requireActor(), e => e.status === 401)
+  liveSession.userId = 'user_alice'; user.banned = true
+  await assert.rejects(requireActor(), e => e.status === 403)
+})
+test('admin role checked live; demotion applies to next request', async () => {
+  user.publicMetadata.role = 'admin'
+  assert.equal((await requireActor(true)).role, 'admin')
+  user.publicMetadata.role = 'user'
+  await assert.rejects(requireActor(true), e => e.status === 403)
+})
+test('regular user cannot read admin feedback API; DB is not touched', async () => {
+  const response = await feedback.GET(req('/api/feedback'))
+  assert.equal(response.status, 403); assert.equal(queryCalls.length, 0)
+})
+test('anonymous admin API request returns 401, not data', async () => {
+  authState = { userId: null, sessionId: null }
+  const response = await feedback.GET(req('/api/feedback'))
+  assert.equal(response.status, 401); assert.equal(queryCalls.length, 0)
+})
+test('admin list reads conversations and commits an audit entry', async () => {
+  user.publicMetadata.role = 'admin'
+  queryRows = [{ id: 'c1' }]
+  const response = await feedback.GET(req('/api/feedback'))
+  assert.equal(response.status, 200)
+  assert.deepEqual((await response.json()).items, [{ id: 'c1' }])
+  assert(queryCalls.some(q => q.sql.includes('xiaoan_admin_access') && q.values[0] === 'user_alice'))
+  assert.equal(queryCalls.at(-1).sql, 'COMMIT')
+})
+test('review rejects forged user/transcript/role, invalid score and long comment', () => {
+  const valid = { conversationId: 'c1', responseId: 'r1', score: 4, comment: '更具体一些' }
+  assert.equal(validateReview(valid).score, 4)
+  for (const data of [{ ...valid, userId: 'other' }, { ...valid, chatList: [] }, { ...valid, role: 'admin' }, { ...valid, score: 0 }, { ...valid, score: 6 }, { ...valid, score: 1.5 }, { ...valid, comment: 'a'.repeat(501) }]) assert.throws(() => validateReview(data), e => e.status === 400)
+})
+test('review ownership and completed answer checked in same parameterized write', async () => {
+  queryRows = [{ responseId: 'r1', score: 4, comment: 'test' }]
+  await repository.saveReview(actor, { conversationId: 'c1', responseId: 'r1', score: 4, comment: "'quoted'" })
+  const query = queryCalls[0]
+  assert.match(query.sql, /account_turns/)
+  assert.match(query.sql, /u.clerk_user_id=\$3 AND u.status='active'/)
+  assert.deepEqual(query.values, ['c1', 'r1', 'user_alice', 4, "'quoted'"])
+  queryRows = []
+  await assert.rejects(repository.saveReview(actor, { conversationId: 'other', responseId: 'r1', score: 5, comment: '' }), e => e.status === 404)
+})
+test('regular user can submit through reviews, not old transcript API', async () => {
+  process.env.FRONTEND_ORIGIN = 'https://site.example'
+  queryRows = [{ responseId: 'r1', score: 4, comment: '' }]
+  const response = await reviews.POST(req('/api/reviews', { method: 'POST', headers: { Origin: 'https://site.example' }, body: JSON.stringify({ conversationId: 'c1', responseId: 'r1', score: 4, comment: '' }) }))
+  assert.equal(response.status, 200)
+  assert.equal(feedback.POST, undefined)
+})
+test('cross-origin review rejected before auth/DB', async () => {
+  const response = await reviews.POST(req('/api/reviews', { method: 'POST', headers: { Origin: 'https://evil.example' }, body: '{}' }))
+  assert.equal(response.status, 403); assert.equal(queryCalls.length, 0)
+})
+test('Clerk outage fails closed without leaking provider errors', async () => {
+  failClerk = true
+  const response = await feedback.GET(req('/api/feedback'))
+  assert.equal(response.status, 503)
+  assert(!JSON.stringify(await response.json()).includes('credential'))
+  assert.equal(queryCalls.length, 0)
+})
+test('logout revokes only session, expires cookies and never deletes history', async () => {
+  process.env.FRONTEND_ORIGIN = 'https://site.example'
+  const response = await clear.POST(req('/api/session/clear', { method: 'POST', headers: { Origin: 'https://site.example', Cookie: '__session=jwt; custom=value' } }))
+  assert.equal(response.status, 200)
+  assert.deepEqual(revoked, ['sess_1'])
+  assert.equal(queryCalls.length, 0)
+  const cookies = response.headers.getSetCookie()
+  for (const [name, cookiePath] of [['__session', '/'], ['xiaoan_guest', '/v1'], ['xiaoan_current', '/v1'], ['feedback_auth', '/feedback'], ['custom', '/']]) {
+    assert(cookies.some(c => c.startsWith(name + '=;') && c.includes(`Path=${cookiePath};`) && c.includes('Max-Age=0')))
+  }
+  assert.match(response.headers.get('Clear-Site-Data'), /cookies/)
+})
+test('logout still expires cookies on Clerk failure but does not claim success', async () => {
+  failClerk = true
+  const response = await clear.POST(req('/api/session/clear', { method: 'POST', headers: { Origin: 'https://site.example' } }))
+  assert.equal(response.status, 503)
+  assert.equal((await response.json()).revoked, false)
+  assert(response.headers.getSetCookie().length > 0)
+  assert.equal(queryCalls.length, 0)
+})
+test('cross-origin logout is rejected and cannot clear credentials', async () => {
+  const response = await clear.POST(req('/api/session/clear', { method: 'POST', headers: { Origin: 'https://evil.example' } }))
+  assert.equal(response.status, 403)
+  assert.equal(response.headers.getSetCookie().length, 0)
+  assert.equal(revoked.length, 0)
+})

@@ -1,46 +1,16 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-
-const ESCAPE_URL = 'https://www.weather.com.cn/'
-const QUICK_EXIT_SESSION_KEY = 'xiaoan_quick_exit'
-
-function isQuickExitLocked() {
-  try {
-    return sessionStorage.getItem(QUICK_EXIT_SESSION_KEY) === '1'
-  }
-  catch (error) {
-    console.warn('Unable to read the quick-exit lock', error)
-    return false
-  }
-}
-
-function redirectIfQuickExitLocked() {
-  if (!isQuickExitLocked()) {
-    return
-  }
-
-  document.documentElement.style.visibility = 'hidden'
-  window.location.replace(ESCAPE_URL)
-}
+import { usePathname } from 'next/navigation'
 
 export function quickEscape() {
-  void fetch('/v1/conversations/current', {
-    method: 'DELETE',
-    credentials: 'include',
-    keepalive: true,
-    cache: 'no-store',
-  }).catch(error => console.warn('Unable to delete the current conversation', error))
-  try {
-    sessionStorage.setItem(QUICK_EXIT_SESSION_KEY, '1')
-  }
-  catch (error) {
-    console.warn('Unable to persist the quick-exit lock', error)
-  }
+  // Hide sensitive content synchronously, then use the dedicated sign-out screen.
   document.documentElement.style.visibility = 'hidden'
-  window.location.replace(ESCAPE_URL)
+  try { localStorage.clear(); sessionStorage.clear() } catch {}
+  window.location.replace('/exit')
 }
 
 export default function QuickExit() {
+  const pathname = usePathname()
   // null = use default CSS position (top-right); once dragged, track in px
   const [pos, setPos] = useState<{ x: number, y: number } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -54,16 +24,11 @@ export default function QuickExit() {
   const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    redirectIfQuickExitLocked()
-    window.addEventListener('pageshow', redirectIfQuickExitLocked)
-    return () => window.removeEventListener('pageshow', redirectIfQuickExitLocked)
-  }, [])
-
-  useEffect(() => {
+    if (pathname === '/exit') { return }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { quickEscape() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
@@ -134,6 +99,8 @@ export default function QuickExit() {
   const posStyle = pos
     ? { left: pos.x, top: pos.y, right: 'auto' as const, bottom: 'auto' as const }
     : { top: 12, right: 12 }
+
+  if (pathname === '/exit') { return null }
 
   return (
     <button

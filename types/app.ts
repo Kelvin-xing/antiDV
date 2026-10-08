@@ -96,6 +96,7 @@ export interface UserReview {
 }
 
 export type ChatItem = IChatItem & {
+  safetyLevel?: import('./chatflow').SafetyLevel
   isError?: boolean
   workflow_run_id?: string
   workflowProcess?: WorkflowProcess

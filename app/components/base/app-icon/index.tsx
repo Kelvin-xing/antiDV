@@ -1,7 +1,8 @@
 import type { FC } from 'react'
+import { brandAssets } from '@/config/brand-assets'
 
 export interface AppIconProps {
-  size?: 'xs' | 'tiny' | 'small' | 'medium' | 'large'
+  size?: 'xs' | 'tiny' | 'small' | 'medium' | 'large' | 'hero'
   rounded?: boolean
   icon?: string
   background?: string
@@ -14,6 +15,7 @@ const sizeMap: Record<string, number> = {
   small: 32,
   medium: 36,
   large: 40,
+  hero: 120,
 }
 
 const AppIcon: FC<AppIconProps> = ({
@@ -24,21 +26,21 @@ const AppIcon: FC<AppIconProps> = ({
 }) => {
   const px = sizeMap[size] ?? 36
   return (
-    <img
-      src="/avatar.png"
-      alt="小安"
-      width={px}
-      height={px}
+    <span
+      role="img"
+      aria-label="小安"
       className={className}
       style={{
         width: px,
         height: px,
         borderRadius: rounded ? '50%' : 8,
-        objectFit: 'cover',
-        objectPosition: 'center top',
+        backgroundImage: `url(${brandAssets.avatar})`,
+        backgroundSize: brandAssets.avatarSize,
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         flexShrink: 0,
         display: 'block',
-        background,
+        backgroundColor: background,
       }}
     />
   )

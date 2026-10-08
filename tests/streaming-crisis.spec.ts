@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+test.skip(!process.env.CLERK_E2E_STORAGE_STATE, 'Requires a configured Clerk test account and authenticated storage state')
+test.use({ storageState: process.env.CLERK_E2E_STORAGE_STATE })
+
 interface SmoothTestTurn {
   user: string
   assistant: string

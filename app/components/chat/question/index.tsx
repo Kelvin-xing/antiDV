@@ -16,12 +16,12 @@ const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSr
   const userName = ''
   return (
     <div className='flex items-start justify-end' key={id}>
-      <div>
+      <div className="min-w-0 max-w-[85%]">
         <div className={`${s.question} relative text-sm text-gray-900 group`}>
           {onDelete && (
             <button
               onClick={onDelete}
-              className="absolute top-[-10px] left-0 opacity-0 group-hover:opacity-100 z-10 p-1 rounded-lg bg-white shadow transition-opacity"
+              className="absolute top-[-10px] left-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 z-10 p-1 rounded-lg bg-white shadow transition-opacity"
               title="刪除此訊息"
               style={{ color: '#B5A898' }}
             >
@@ -34,7 +34,7 @@ const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSr
             </button>
           )}
           <div
-            className={'mr-2 py-3 px-4 bg-blue-500 rounded-tl-2xl rounded-b-2xl'}
+            className='chat-question-bubble'
           >
             {imgSrcs && imgSrcs.length > 0 && (
               <ImageGallery srcs={imgSrcs} />

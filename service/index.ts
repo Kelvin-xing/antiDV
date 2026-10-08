@@ -1,466 +1,196 @@
-import type { ConversationItem } from '@/types/app'
-import { ApiError, apiRequest, SERVICE_UNAVAILABLE_MESSAGE, streamSSE } from './base'
+import { createParser } from 'eventsource-parser'
+import type { CompletedResponse, ConversationSummary, ConversationView } from '@/types/chatflow'
 
-interface ConversationTurn {
-  user: string
-  assistant: string
-  route_id: string
-  safety_level: string
-  debug?: ChatDebugPayload | null
-}
-
-interface ConversationView {
-  conversation_id: string
-  turns: ConversationTurn[]
-}
-
-interface ConversationCreated {
-  conversation_id: string
-}
-
-interface ChatResponse {
-  conversation_id: string
-  response_id: string
-  answer: string
-  safety_level?: string
-  debug?: ChatDebugPayload | null
-}
-
-export interface SendChatBody {
-  query: string
-  conversation_id?: string | null
-  debug?: boolean
-  router_model?: string
-  response_model?: string
-}
-
-export interface ChatModelRoleConfig {
-  default: string
-  options: string[]
-}
-
-export interface ChatModelConfig {
-  router: ChatModelRoleConfig
-  response: ChatModelRoleConfig
-}
-
-export interface ChatDebugTimings {
-  preprocess_ms: number
-  router_ms: number
-  ground_ms: number
-  response_ttft_ms: number | null
-  first_guarded_delta_ms: number | null
-  response_generation_ms: number
-  finalize_ms: number
-  total_ms: number
-}
-
-export interface ChatDebugPayload {
-  models?: {
-    router: string
-    response: string
-  } | null
-  route: {
-    capsule_id: string
-    capsule_title: string
-    confidence: number
-    reason: string
-    should_continue_active_capsule: boolean
-    method: string
+export class ChatApiError extends Error {
+  constructor(public status: number, message: string, public responseId?: string) {
+    super(message)
   }
-  timings: ChatDebugTimings
-  [key: string]: unknown
 }
 
-interface SendChatHandlers {
-  onConversationCreated?: (conversationId: string) => void
-  onData: (
-    message: string,
-    isFirstMessage: boolean,
-    moreInfo: {
-      conversationId: string
-      messageId: string
-      taskId: string
-    },
-  ) => void
-  onStarted?: (moreInfo: {
-    conversationId: string
-    messageId: string
-    taskId: string
-  }) => void
-  onDebug?: (debug: ChatDebugPayload) => void
-  onCompleted: (hasError?: boolean, result?: { safety_level?: string }) => void
-  onError: (message: string, code?: string) => void
-  getAbortController?: (controller: AbortController) => void
+function httpMessage(status: number) {
+  if (status === 404) { return '会话已过期或不可访问，请新建对话' }
+  if (status === 403) { return '请求未获允许，请检查服务配置' }
+  if (status === 422) { return '请输入 1–4000 字的消息' }
+  if (status === 429) { return '请求过于频繁，请稍后重试' }
+  return '小安暂时无法提供服务，请稍后重试'
 }
 
-interface ConversationsResponse {
-  data: ConversationItem[]
-  has_more: boolean
-  limit: number
+async function request(path: string, init: RequestInit = {}) {
+  const response = await fetch(`/v1${path}`, { ...init, credentials: 'include', cache: 'no-store' })
+  if (!response.ok) {
+    await response.body?.cancel()
+    throw new ChatApiError(response.status, httpMessage(response.status))
+  }
+  return response
 }
 
-export interface ChatHistoryItem {
-  id: string
-  query: string
-  answer: string
-  route_id: string
-  safety_level: string
-  debug: ChatDebugPayload | null
-  message_files: never[]
-  feedback: null
+export async function createConversation(signal?: AbortSignal): Promise<{ conversation_id: string }> {
+  const data = await (await request('/conversations', { method: 'POST', signal })).json()
+  if (typeof data.conversation_id !== 'string' || !data.conversation_id) { throw new ChatApiError(502, '会话服务返回格式无效') }
+  return data
 }
 
-interface StreamIdentity {
-  conversationId: string
-  responseId: string
-}
-
-const appParameters = {
-  opening_statement: '你好，我是小安。你可以慢慢说，不需要一次讲完整。我会尽力陪你梳理现在的情况和可选的下一步。',
-  suggested_questions: [
-    '我不确定这算不算家暴',
-    '我想了解怎么保护自己',
-    '我需要法律和求助资源',
-  ],
-  user_input_form: [],
-  file_upload: {
-    image: {
-      enabled: false,
-      number_limits: 0,
-      transfer_methods: [],
-    },
-    enabled: false,
-    allowed_file_types: [],
-    allowed_file_extensions: [],
-    allowed_file_upload_methods: [],
-    number_limits: 0,
-  },
-  system_parameters: {},
-}
-
-const toConversationItem = (
-  conversation: ConversationView,
-): ConversationItem => ({
-  id: conversation.conversation_id,
-  name: conversation.turns[0]?.user.slice(0, 24) || '当前对话',
-  inputs: {},
-  introduction: '',
-})
-
-const readEventObject = (data: string): Record<string, unknown> => {
-  const parsed: unknown = JSON.parse(data)
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-    { throw new Error('流式响应格式无效') }
-  return parsed as Record<string, unknown>
-}
-
-const readRequiredString = (
-  payload: Record<string, unknown>,
-  field: string,
-): string => {
-  const value = payload[field]
-  if (typeof value !== 'string' || !value)
-    { throw new Error(`流式响应缺少 ${field}`) }
-  return value
-}
-
-const readChatDebugPayload = (value: unknown): ChatDebugPayload => {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    { throw new Error('调试信息格式无效') }
-
-  const payload = value as Record<string, unknown>
-  const route = payload.route
-  const timings = payload.timings
-  const models = payload.models
-  if (!route || typeof route !== 'object' || Array.isArray(route))
-    { throw new Error('调试信息缺少路由结果') }
-  if (!timings || typeof timings !== 'object' || Array.isArray(timings))
-    { throw new Error('调试信息缺少分段计时') }
-  if (
-    models !== undefined
-    && models !== null
-    && (
-      typeof models !== 'object'
-      || Array.isArray(models)
-      || typeof (models as Record<string, unknown>).router !== 'string'
-      || typeof (models as Record<string, unknown>).response !== 'string'
-    )
-  )
-    { throw new Error('调试信息模型字段格式无效') }
-
-  const routeRecord = route as Record<string, unknown>
-  const timingRecord = timings as Record<string, unknown>
-  const timingFields = [
-    'preprocess_ms',
-    'router_ms',
-    'ground_ms',
-    'response_ttft_ms',
-    'first_guarded_delta_ms',
-    'response_generation_ms',
-    'finalize_ms',
-    'total_ms',
-  ]
-  if (
-    typeof routeRecord.capsule_id !== 'string'
-    || typeof routeRecord.capsule_title !== 'string'
-    || typeof routeRecord.confidence !== 'number'
-    || typeof routeRecord.reason !== 'string'
-    || typeof routeRecord.should_continue_active_capsule !== 'boolean'
-    || typeof routeRecord.method !== 'string'
-    || timingFields.some((field) => {
-      const timing = timingRecord[field]
-      return timing !== null && typeof timing !== 'number'
-    })
-  )
-    { throw new Error('调试信息字段格式无效') }
-
-  return value as ChatDebugPayload
-}
-
-const assertEventIdentity = (
-  payload: Record<string, unknown>,
-  expected: StreamIdentity,
-) => {
-  if (
-    readRequiredString(payload, 'conversation_id') !== expected.conversationId
-    || readRequiredString(payload, 'response_id') !== expected.responseId
-  )
-    { throw new Error('流式响应的会话标识发生变化') }
-}
-
-export const fetchAppParams = async () => appParameters
-
-export const fetchChatModelConfig = async (): Promise<ChatModelConfig> => {
-  return apiRequest<ChatModelConfig>('/config/models')
-}
-
-export const fetchConversations = async (): Promise<ConversationsResponse> => {
-  try {
-    const conversation = await apiRequest<ConversationView>('/conversations/current')
-    return {
-      data: [toConversationItem(conversation)],
-      has_more: false,
-      limit: 1,
+export async function fetchConversations(signal?: AbortSignal): Promise<ConversationSummary[]> {
+  const items: ConversationSummary[] = []
+  let offset = 0
+  while (true) {
+    const page = await (await request(`/conversations?limit=100&offset=${offset}`, { signal })).json()
+    if (!Array.isArray(page.items) || page.items.some((item: ConversationSummary) => typeof item.id !== 'string')) {
+      throw new ChatApiError(502, '会话列表格式无效')
     }
+    items.push(...page.items)
+    if (page.next_offset == null) { return items }
+    if (!Number.isInteger(page.next_offset) || page.next_offset <= offset) { throw new ChatApiError(502, '会话分页格式无效') }
+    offset = page.next_offset
   }
+}
+
+export async function fetchConversation(id: string, signal?: AbortSignal): Promise<ConversationView> {
+  const turns: ConversationView['turns'] = []
+  let after = 0
+  while (true) {
+    const page: ConversationView = await (await request(`/conversations/${encodeURIComponent(id)}?limit=100&after=${after}`, { signal })).json()
+    if (page.conversation_id !== id || !Array.isArray(page.turns)
+      || page.turns.some(turn => typeof turn.user !== 'string' || typeof turn.assistant !== 'string')) {
+      throw new ChatApiError(502, '会话记录格式无效')
+    }
+    turns.push(...page.turns)
+    if (page.next_after == null) { return { conversation_id: id, turns } }
+    if (!Number.isInteger(page.next_after) || page.next_after <= after) { throw new ChatApiError(502, '记录分页格式无效') }
+    after = page.next_after
+  }
+}
+
+export async function fetchCurrentConversation(signal?: AbortSignal): Promise<ConversationView | null> {
+  let response: Response
+  try { response = await request('/conversations/current', { signal }) }
   catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return {
-        data: [],
-        has_more: false,
-        limit: 1,
-      }
-    }
+    if (error instanceof ChatApiError && error.status === 404) { return null }
     throw error
   }
+  const current = await response.json()
+  if (typeof current.conversation_id !== 'string') { throw new ChatApiError(502, '当前会话格式无效') }
+  // Account-mode /current contains at most 100 turns; use the paginated endpoint.
+  return fetchConversation(current.conversation_id, signal)
 }
 
-export const fetchChatList = async (
+export async function deleteConversation(id: string) {
+  await request(`/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export interface StreamCallbacks {
+  onStart?: (responseId: string) => void
+  onDelta: (text: string) => void
+}
+
+/** Success means completed, never EOF. This function never retries generation. */
+export async function readChatStream(
+  response: Response,
   conversationId: string,
-): Promise<{ data: ChatHistoryItem[], has_more: boolean, limit: number }> => {
-  const conversation = await apiRequest<ConversationView>(
-    `/conversations/${encodeURIComponent(conversationId)}`,
-  )
-
-  return {
-    data: conversation.turns.map((turn, index) => ({
-      id: `turn-${index}`,
-      query: turn.user,
-      answer: turn.assistant,
-      route_id: turn.route_id,
-      safety_level: turn.safety_level,
-      debug: turn.debug ?? null,
-      message_files: [],
-      feedback: null,
-    })),
-    has_more: false,
-    limit: conversation.turns.length,
+  callbacks: StreamCallbacks,
+  idleTimeoutMs = 60000,
+): Promise<CompletedResponse> {
+  if (!response.headers.get('content-type')?.includes('text/event-stream') || !response.body) {
+    await response.body?.cancel()
+    throw new ChatApiError(502, '服务未返回流式回复，请稍后重试')
   }
-}
-
-export const sendChatMessage = async (
-  body: SendChatBody,
-  handlers: SendChatHandlers,
-) => {
-  const controller = new AbortController()
-  handlers.getAbortController?.(controller)
-
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let responseId: string | undefined
+  let completed: CompletedResponse | undefined
+  let sawDebug = false
+  let lastWasCR = false
+  const parser = createParser((event) => {
+    if (event.type !== 'event' || completed) { return }
+    const data = JSON.parse(event.data)
+    if (!data || data.conversation_id !== conversationId || typeof data.response_id !== 'string' || !data.response_id) {
+      throw new ChatApiError(502, '回复标识不一致', responseId)
+    }
+    if (!responseId) {
+      if (event.event !== 'start') { throw new ChatApiError(502, '回复缺少开始事件') }
+      responseId = data.response_id
+      callbacks.onStart?.(data.response_id)
+      return
+    }
+    if (data.response_id !== responseId) { throw new ChatApiError(502, '回复标识不一致', responseId) }
+    switch (event.event) {
+      case 'delta':
+        if (sawDebug || typeof data.delta !== 'string') { throw new ChatApiError(502, '回复片段格式无效', responseId) }
+        callbacks.onDelta(data.delta)
+        break
+      case 'debug':
+        if (sawDebug) { throw new ChatApiError(502, '重复的调试事件', responseId) }
+        sawDebug = true
+        break // Never include debug in visible text or persisted/exported messages.
+      case 'completed':
+        if (!['normal', 'unclear', 'immediate_danger', 'self_harm'].includes(data.safety_level)) {
+          throw new ChatApiError(502, '安全状态格式无效', responseId)
+        }
+        completed = data
+        break
+      case 'error':
+        throw new ChatApiError(503, '本次回复未完成，请稍后手动重试', responseId)
+      default:
+        throw new ChatApiError(502, '回复事件顺序无效', responseId)
+    }
+  })
   try {
-    let conversationId = body.conversation_id
-    if (!conversationId) {
-      const created = await apiRequest<ConversationCreated>('/conversations', {
-        method: 'POST',
-        signal: controller.signal,
-      })
-      conversationId = created.conversation_id
-      controller.signal.throwIfAborted()
-      handlers.onConversationCreated?.(conversationId)
-    }
-
-    const responsePath = `/conversations/${encodeURIComponent(conversationId)}/responses`
-    const requestBody = JSON.stringify({
-      message: body.query,
-      debug: body.debug ?? false,
-      ...(body.router_model ? { router_model: body.router_model } : {}),
-      ...(body.response_model ? { response_model: body.response_model } : {}),
-    })
-    let streamIdentity: StreamIdentity | null = null
-    let streamCompleted = false
-    let safetyLevel: string | undefined
-    let firstDelta = true
-    let inactivityTimedOut = false
-    let inactivityTimer: number | undefined
-
-    const resetInactivityTimer = () => {
-      if (inactivityTimer !== undefined)
-        { window.clearTimeout(inactivityTimer) }
-      inactivityTimer = window.setTimeout(() => {
-        inactivityTimedOut = true
-        controller.abort()
-      }, 120000)
-    }
-
-    try {
-      resetInactivityTimer()
-      await streamSSE(
-        `${responsePath}/stream`,
-        {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: requestBody,
-        },
-        (event) => {
-          controller.signal.throwIfAborted()
-          const payload = readEventObject(event.data)
-          if (event.event === 'start') {
-            if (streamIdentity)
-              { throw new Error('收到了重复的流式开始事件') }
-            const startedConversationId = readRequiredString(payload, 'conversation_id')
-            if (startedConversationId !== conversationId)
-              { throw new Error('流式响应与请求的会话不一致') }
-            streamIdentity = {
-              conversationId: startedConversationId,
-              responseId: readRequiredString(payload, 'response_id'),
-            }
-            handlers.onStarted?.({
-              conversationId: streamIdentity.conversationId,
-              messageId: streamIdentity.responseId,
-              taskId: streamIdentity.responseId,
-            })
-            return
-          }
-
-          if (!streamIdentity)
-            { throw new Error(`在开始事件之前收到了 ${event.event} 事件`) }
-          if (streamCompleted)
-            { throw new Error('在完成事件之后仍收到了流式数据') }
-          assertEventIdentity(payload, streamIdentity)
-
-          if (event.event === 'delta') {
-            const delta = payload.delta
-            if (typeof delta !== 'string')
-              { throw new Error('流式文本片段格式无效') }
-            if (delta) {
-              handlers.onData(delta, firstDelta, {
-                conversationId: streamIdentity.conversationId,
-                messageId: streamIdentity.responseId,
-                taskId: streamIdentity.responseId,
-              })
-              firstDelta = false
-            }
-          }
-          else if (event.event === 'completed') {
-            safetyLevel = typeof payload.safety_level === 'string' ? payload.safety_level : undefined
-            streamCompleted = true
-            return false
-          }
-          else if (event.event === 'debug') {
-            handlers.onDebug?.(readChatDebugPayload(payload.debug))
-          }
-          else if (event.event === 'error') {
-            throw new ApiError(503, SERVICE_UNAVAILABLE_MESSAGE, 'service_unavailable')
-          }
-        },
-        resetInactivityTimer,
-      )
-    }
-    catch (error) {
-      if (inactivityTimedOut)
-        { throw new ApiError(408, '生成回复超时，请稍后重试') }
-
-      if (
-        error instanceof ApiError
-        && [404, 405, 406].includes(error.status)
-        && error.code !== 'service_unavailable'
-        && !streamIdentity
-        && !controller.signal.aborted
-      ) {
-        resetInactivityTimer()
-        const response = await apiRequest<ChatResponse>(responsePath, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: requestBody,
-        })
-        controller.signal.throwIfAborted()
-        handlers.onStarted?.({
-          conversationId: response.conversation_id,
-          messageId: response.response_id,
-          taskId: response.response_id,
-        })
-        handlers.onData(response.answer, true, {
-          conversationId: response.conversation_id,
-          messageId: response.response_id,
-          taskId: response.response_id,
-        })
-        if (response.debug)
-          { handlers.onDebug?.(readChatDebugPayload(response.debug)) }
-        safetyLevel = response.safety_level
-        streamCompleted = true
+    while (true) {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const chunk = await Promise.race([
+        reader.read(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new ChatApiError(0, '连接超时，请先检查会话记录', responseId)), idleTimeoutMs)
+        }),
+      ]).finally(() => clearTimeout(timer))
+      if (chunk.done) { throw new ChatApiError(0, '连接中断，请先检查会话记录', responseId) }
+      // v1 parser loses CRLF state when CR and LF arrive in separate chunks.
+      // Normalize line endings while retaining that state across network reads.
+      let normalized = ''
+      for (const char of decoder.decode(chunk.value, { stream: true })) {
+        if (char === '\n' && lastWasCR) { lastWasCR = false; continue }
+        normalized += char === '\r' ? '\n' : char
+        lastWasCR = char === '\r'
       }
-      else {
-        throw error
-      }
+      if (normalized) { parser.feed(normalized) }
+      if (completed) { return completed }
     }
-    finally {
-      if (inactivityTimer !== undefined)
-        { window.clearTimeout(inactivityTimer) }
-    }
-
-    if (!streamCompleted)
-      { throw new Error('流式响应在完成事件之前中断') }
-    controller.signal.throwIfAborted()
-    handlers.onCompleted(false, { safety_level: safetyLevel })
   }
   catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      handlers.onError('已停止生成', 'aborted')
-      return
-    }
-    if (
-      error instanceof ApiError
-      && error.status >= 400
-      && error.status < 500
-      && error.status !== 408
-      && error.code !== 'service_unavailable'
-    ) {
-      handlers.onError(error.message, 'request_error')
-      return
-    }
-    handlers.onError(SERVICE_UNAVAILABLE_MESSAGE, 'service_unavailable')
+    if (error instanceof ChatApiError) { throw error }
+    throw new ChatApiError(0, '回复中断或格式无效，请先检查会话记录', responseId)
+  }
+  finally {
+    await reader.cancel().catch(() => {})
+    reader.releaseLock()
   }
 }
 
-export const deleteConversation = async (conversationId: string) => {
-  await apiRequest<void>(
-    `/conversations/${encodeURIComponent(conversationId)}`,
-    { method: 'DELETE' },
-  )
-  return { result: 'success' }
+export async function sendChatMessage(id: string, message: string, callbacks: StreamCallbacks, signal: AbortSignal) {
+  if (!message.trim() || Array.from(message).length > 4000) { throw new ChatApiError(422, httpMessage(422)) }
+  const response = await request(`/conversations/${encodeURIComponent(id)}/responses/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify({ message, debug: false }),
+    signal,
+  })
+  return readChatStream(response, id, callbacks)
+}
+
+export async function fetchReviews(conversationId: string, signal?: AbortSignal): Promise<Record<string, { score: number, comment: string }>> {
+  const response = await fetch(`/api/reviews?conversationId=${encodeURIComponent(conversationId)}`, { credentials: 'include', cache: 'no-store', signal })
+  if (!response.ok) { throw new ChatApiError(response.status, '评价暂时无法读取') }
+  const data = await response.json()
+  return Object.fromEntries(data.items.map((item: { responseId: string, score: number, comment: string }) => [item.responseId, { score: item.score, comment: item.comment }]))
+}
+
+export async function saveReview(conversationId: string, responseId: string, review: { score: number, comment: string }) {
+  const response = await fetch('/api/reviews', {
+    method: 'POST',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId, responseId, ...review }),
+  })
+  if (!response.ok) { throw new ChatApiError(response.status, response.status === 401 ? '登录已失效，请重新登录' : '评价未保存，请重试') }
 }

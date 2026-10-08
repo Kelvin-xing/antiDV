@@ -4,6 +4,9 @@ import React from 'react'
 import Link from 'next/link'
 import ContactForm from '@/app/components/contact-form'
 import ScrollReveal from '@/app/components/scroll-reveal'
+import { brandAssets } from '@/config/brand-assets'
+import './styles/figma-home.css'
+import AppIcon from '@/app/components/base/app-icon'
 
 export const metadata: Metadata = {
   title: {
@@ -87,7 +90,7 @@ const features = [
   {
     icon: <IconShield />,
     title: '隐私保护',
-    desc: '对话不留记录于本设备，页面右上角「快速离开」可立即清除当前会话并跳离。',
+    desc: '对话不留记录于本设备，页面右上角「快速离开」可一键清除并跳离。',
     num: '02',
   },
   {
@@ -123,7 +126,7 @@ const features = [
 const faqs = [
   {
     q: '我的对话记录会被保存吗？',
-    a: '小安不会在你的设备上长期保存对话内容。「快速离开」会立即隐藏页面并清除当前会话，清除后无法恢复。',
+    a: '小安不会在你的设备上长期保存对话内容。使用完毕后，建议点击「快速离开」按钮清除当前记录。',
   },
   {
     q: '如果我身处危险，小安能帮我吗？',
@@ -150,23 +153,6 @@ summary::marker { display: none; }
 a:focus-visible, button:focus-visible, summary:focus-visible {
   outline: 2px solid #E8A87C; outline-offset: 2px;
 }
-/* Hero two-column layout */
-.hero-demo { display: none; }
-@media (min-width: 1024px) {
-  .hero-inner { display: flex; align-items: flex-start; gap: 40px; max-width: 960px !important; }
-  .hero-content { flex: 1; }
-  .hero-demo { display: flex; flex-direction: column; width: 340px; flex-shrink: 0; }
-}
-/* Demo chat bubble animations */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.demo-msg { animation: fadeInUp 0.5s ease both; }
-.demo-msg:nth-child(1) { animation-delay: 0.2s; }
-.demo-msg:nth-child(2) { animation-delay: 0.7s; }
-.demo-msg:nth-child(3) { animation-delay: 1.3s; }
-.demo-msg:nth-child(4) { animation-delay: 1.9s; }
 `
 
 const LandingPage: FC = () => {
@@ -185,9 +171,10 @@ const LandingPage: FC = () => {
 
   return (
     <div
+      className="figma-home"
       style={{
         minHeight: '100vh',
-        backgroundColor: '#FBF8F4',
+        backgroundColor: '#FBF9F6',
         fontFamily: "'Noto Sans SC', system-ui, sans-serif",
         color: '#3D3028',
       }}
@@ -198,176 +185,45 @@ const LandingPage: FC = () => {
       />
       <style dangerouslySetInnerHTML={{ __html: reducedMotionStyle }} />
 
-      {/* ─── Hero ─────────────────────────────────── */}
-      <section style={{ padding: '96px 24px 72px', position: 'relative', overflow: 'hidden' }}>
-        {/* Subtle background image */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: 'url(https://images.pexels.com/photos/574312/pexels-photo-574312.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center 40%',
-            opacity: 0.22,
-            zIndex: 0,
-          }}
-        />
-        {/* Warm cream overlay for legibility */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, rgba(251,248,244,0.78) 0%, rgba(245,230,211,0.55) 60%, rgba(251,248,244,0.72) 100%)',
-            zIndex: 1,
-          }}
-        />
-        <div className="hero-inner" style={{ maxWidth: 640, margin: '0 auto', position: 'relative', zIndex: 2 }}>
-          <div className="hero-content">
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                border: '1px solid #E8A87C',
-                borderRadius: 4,
-                padding: '6px 14px',
-                marginBottom: 32,
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#E8A87C', display: 'inline-block' }} />
-              <span style={{ fontSize: 12, color: '#5C4D3E', letterSpacing: '0.06em' }}>反家庭暴力 AI 助手</span>
-            </div>
-
-            <h1
-              style={{
-                fontFamily: "'Noto Serif SC', serif",
-                fontSize: 'clamp(3rem, 8vw, 5rem)',
-                fontWeight: 700,
-                color: '#3D3028',
-                marginBottom: 24,
-                lineHeight: 1.1,
-              }}
-            >
-              小安
-            </h1>
-
-            <div style={{ borderLeft: '3px solid #E8A87C', paddingLeft: 16, marginBottom: 12 }}>
-              <p
-                style={{
-                  fontSize: 18,
-                  color: '#5C4D3E',
-                  fontWeight: 400,
-                  lineHeight: 1.6,
-                }}
-              >
-                你不是一个人，小安在这里陪你。
-              </p>
-            </div>
-
-            <p style={{ fontSize: 14, color: '#7A6B5D', marginBottom: 40 }}>
-              安全 · 保密 · 随时在线
-            </p>
-
-            <Link
-              href="/chat"
-              style={{
-                display: 'inline-block',
-                backgroundColor: '#E8A87C',
-                color: '#fff',
-                borderRadius: 4,
-                padding: '14px 36px',
-                fontSize: 16,
-                fontWeight: 700,
-                textDecoration: 'none',
-                transition: 'opacity 200ms ease-out',
-                minHeight: 48,
-              }}
-            >
-              开始倾诉 →
+      <header className="home-header">
+        <Link href="/" className="home-brand" aria-label="小安首页">
+          <AppIcon size="small" rounded />
+          <span>小安</span>
+        </Link>
+        <nav aria-label="主导航" className="home-nav">
+          <Link href="/" aria-current="page">首页</Link>
+          <a href="#about">小安是谁</a>
+          <a href="#support">小安帮你</a>
+          <a href="#questions">关于家暴</a>
+          <a href="#contact">联系我们</a>
+          <a href="#contact">有话要说</a>
+        </nav>
+      </header>
+      <div className="home-notice" role="note">
+        <span>按照自己的节奏，选择你愿意分享的内容。</span>
+        <span>小安提供情感支持与法律知识参考。</span>
+        <span>陪你了解自己的处境，寻找适合你的下一步。</span>
+      </div>
+      <section className="home-hero" aria-labelledby="welcome-title">
+        <div className="home-hero-grid">
+          <div className="home-intro">
+            <h1 id="welcome-title">你好，我是<span>小安</span></h1>
+            <p>一个24小时在线<br />倾听你、支持你、帮助你维护权益的AI反家暴志愿者</p>
+            <Link href="/chat" className="home-chat-link">
+              <IconChat /><span>和小安说说话</span><span aria-hidden="true">→</span>
             </Link>
-
-            {/* <div style={{ marginTop: 20 }}>
-              <Link href="/stories" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 24 }}>
-                受害者故事
-              </Link>
-              <Link href="/docs-toolkit" style={{ fontSize: 14, color: '#5C4D3E', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                文档工具库
-              </Link>
-            </div> */}
-
-            <p style={{ fontSize: 13, color: '#7A6B5D', marginTop: 24 }}>
-              紧急情况请拨&nbsp;
-              <a href="tel:110" style={{ color: '#E8A87C', fontWeight: 600 }}>110</a>
-              &nbsp;或&nbsp;
-              <a href="tel:12338" style={{ color: '#7CB9A8', fontWeight: 600 }}>12338（妇女热线）</a>
-            </p>
-          </div>{/* end hero-content */}
-
-          {/* Mock chat demo — desktop only via CSS */}
-          <div className="hero-demo" aria-hidden="true">
-            <div style={{
-              background: '#fff',
-              borderRadius: 16,
-              boxShadow: '0 8px 40px rgba(61,48,40,0.10)',
-              overflow: 'hidden',
-              border: '1px solid #EDE5DC',
-              marginTop: 8,
-            }}>
-              {/* window chrome */}
-              <div style={{ background: '#F5E6D3', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #EDE5DC' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDAA80', display: 'inline-block' }} />
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDE5DC', display: 'inline-block' }} />
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EDE5DC', display: 'inline-block' }} />
-                <span style={{ fontSize: 11, color: '#9E8E7E', marginLeft: 8, fontFamily: "'Noto Sans SC', sans-serif" }}>与小安对话</span>
-              </div>
-              {/* messages */}
-              <div style={{ padding: '18px 14px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 260 }}>
-                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, overflow: 'hidden' }}>
-                    <img src="/avatar.png" alt="小安" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-                  </div>
-                  <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
-                    你好，我是小安。不论发生什么，我都在这里，没有评判，只有陪伴。
-                  </div>
-                </div>
-                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8A87C', flexShrink: 0 }} />
-                  <div style={{ background: '#E8A87C', borderRadius: '12px 0 12px 12px', padding: '8px 12px', fontSize: 13, color: '#fff', lineHeight: 1.6, maxWidth: 200, fontFamily: "'Noto Sans SC', sans-serif" }}>
-                    我不知道该怎么办，很害怕…
-                  </div>
-                </div>
-                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F5E6D3', flexShrink: 0, overflow: 'hidden' }}>
-                    <img src="/avatar.png" alt="小安" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-                  </div>
-                  <div style={{ background: '#F5E6D3', borderRadius: '0 12px 12px 12px', padding: '8px 12px', fontSize: 13, color: '#3D3028', lineHeight: 1.6, maxWidth: 240, fontFamily: "'Noto Sans SC', sans-serif" }}>
-                    我听到你了。你的感受很真实。能告诉我，现在你安全吗？
-                  </div>
-                </div>
-                <div className="demo-msg" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8A87C', flexShrink: 0 }} />
-                  <div style={{ background: '#E8A87C', borderRadius: '12px 0 12px 12px', padding: '8px 12px', fontSize: 13, color: '#fff', lineHeight: 1.6, maxWidth: 200, fontFamily: "'Noto Sans SC', sans-serif" }}>
-                    现在还好，但我需要有人听我说说…
-                  </div>
-                </div>
-              </div>
-              {/* fake input */}
-              <div style={{ padding: '10px 14px', borderTop: '1px solid #EDE5DC', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <div style={{ flex: 1, background: '#F9F5F1', borderRadius: 8, padding: '7px 12px', fontSize: 12, color: '#B5A898', fontFamily: "'Noto Sans SC', sans-serif" }}>和小安说说心里话…</div>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#E8A87C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-                </div>
-              </div>
-            </div>
-            <p style={{ fontSize: 11, color: '#9E8E7E', textAlign: 'center', marginTop: 10, fontFamily: "'Noto Sans SC', sans-serif" }}>以上为演示对话，非真实数据</p>
-          </div>{/* end hero-demo */}
-        </div>{/* end hero-inner */}
+          </div>
+          <img className="home-illustration" src={brandAssets.hero} alt="母亲温柔地拥抱孩子" width="640" height="480" fetchPriority="high" />
+        </div>
+        <a href="#about" className="home-scroll">谢谢你的信任，一起来认识小安吧<span aria-hidden="true">⌄</span></a>
+      </section>
+      <section id="about" className="home-about">
+        <h2>你可以慢慢说，小安在这里</h2>
+        <p>无论你想倾诉、了解自己的处境，还是寻找支持，都可以从这里开始。</p>
       </section>
 
       {/* ─── Features (Editorial Rows) ────────────── */}
-      <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 72px' }}>
+      <section id="support" style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 72px' }}>
         <div
           style={{
             display: 'grid',
@@ -436,13 +292,13 @@ const LandingPage: FC = () => {
             你的隐私是我们的首要承诺。对话内容仅用于本次会话，不会长期保存。
           </p>
           <p style={{ fontSize: 14, color: '#5C4D3E', lineHeight: 1.8 }}>
-            如果你担心被人看到，可以随时点击右上角<strong>「快速离开」</strong>立即隐藏页面、清除当前会话并跳转。退出后，本标签页通过后退也不会重新显示对话。
+            如果你担心被人看到，可以随时点击右上角<strong>「快速离开」</strong>一键清除记录并跳转。浏览器不会留下返回记录。
           </p>
         </div>
       </section>
 
       {/* ─── FAQ ──────────────────────────────────── */}
-      <section style={{ maxWidth: 680, margin: '0 auto', padding: '72px 24px' }}>
+      <section id="questions" style={{ maxWidth: 680, margin: '0 auto', padding: '72px 24px' }}>
         <h2
           style={{
             fontFamily: "'Noto Serif SC', serif",
@@ -488,7 +344,7 @@ const LandingPage: FC = () => {
       </section>
 
       {/* ─── Contact ──────────────────────────────── */}
-      <section style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px 72px' }}>
+      <section id="contact" style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px 72px' }}>
         <hr style={{ border: 'none', borderTop: '1px solid #E6DDD5', marginBottom: 48 }} />
         <div
           style={{
