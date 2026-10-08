@@ -96,3 +96,4 @@
 .answer::before, .question::before { display: none; }
 .answerWrap:focus-within .itemOperation { display: flex; }
 @media (hover: none) { .answerWrap .itemOperation { display: flex; } }
+/* stylelint-disable */
