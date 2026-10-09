@@ -1,28 +1,32 @@
+---
 name: Trigger auto deployment for xiaoan-web
 
 # When this action will be executed
 on:
   # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ main ]
+    branches: [main]
     paths:
-    - '**'
-    - '.github/workflows/xiaoan-web-AutoDeployTrigger-644865fe-3cfb-4c0e-862f-3a6dad3e0586.yml'
+      - '**'
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       id-token: write #This is required for requesting the OIDC JWT Token
       contents: read #Required when GH token is used to authenticate with private repo
 
     steps:
       - name: Checkout to the branch
         uses: actions/checkout@v2
+
+      - name: Check Clerk build configuration
+        env:
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.XIAOANWEB_CLERK_PUBLISHABLE_KEY }}
+        run: test -n "$CLERK_PUBLISHABLE_KEY"
 
       - name: Azure Login
         uses: azure/login@v2
@@ -31,19 +35,32 @@ jobs:
           tenant-id: ${{ secrets.XIAOANWEB_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.XIAOANWEB_AZURE_SUBSCRIPTION_ID }}
 
+      - name: Check frontend runtime configuration
+        run: |
+          az containerapp show -n xiaoan-web -g xiaoan-pilot-rg -o json |
+            jq -e '
+              .properties.configuration.ingress.fqdn as $fqdn |
+              .properties.template.containers[0].env as $env |
+              ([$env[] | select(.name == "CLERK_SECRET_KEY" and
+                .secretRef == "clerk-secret-key")] | length) == 1 and
+              ([$env[] | select(.name == "BACKEND_API_URL" and
+                .value == "http://xiaoan-api")] | length) == 1 and
+              ([$env[] | select(.name == "FRONTEND_ORIGIN" and
+                .value == ("https://" + $fqdn))] | length) == 1
+            ' >/dev/null
+
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
+          dockerfilePath: Dockerfile
+          targetPort: 3000
           registryUrl: xiaoanhd5dc8acr.azurecr.io
           registryUsername: ${{ secrets.XIAOANWEB_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.XIAOANWEB_REGISTRY_PASSWORD }}
           containerAppName: xiaoan-web
           resourceGroup: xiaoan-pilot-rg
-          imageToBuild: xiaoanhd5dc8acr.azurecr.io/xiaoan-web:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
-
-
+          imageToBuild: >-
+            xiaoanhd5dc8acr.azurecr.io/xiaoan-web:${{ github.sha }}
+          buildArguments: |
+            "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.XIAOANWEB_CLERK_PUBLISHABLE_KEY }}"
