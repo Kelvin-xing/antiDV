@@ -1,6 +1,16 @@
 # 小安前端
 
 小安的 Next.js 前端，直接对接自建 Chatflow API，可部署到 Azure 等 Node.js 容器环境。
+
+Azure Container Apps 自动部署使用根目录 `Dockerfile`，在 GitHub Actions Secrets
+配置 `XIAOANWEB_CLERK_PUBLISHABLE_KEY`（与后端同一 Clerk application）。
+构建期只传公开的 publishable key；`CLERK_SECRET_KEY` 必须在运行期从 Azure
+Key Vault 注入。现有 `xiaoan-web` 还需设置 `BACKEND_API_URL=http://xiaoan-api`
+及与公开站点完全一致的 `FRONTEND_ORIGIN`。后端仓库的 Terraform 配置提供
+这些环境变量和 Key Vault 引用；先审阅原有 state 的 `terraform plan` 并应用，
+然后运行本仓库的自动部署。缺少配置时部署工作流会提前失败，不会更换镜像。
+评分/管理员功能启用还需按 [Clerk/反馈启用说明](docs/CLERK_FEEDBACK_SETUP.md)
+完成数据库迁移及独立的受限 `CHATFLOW_DATABASE_URL` 运行期密钥配置。
 聊天使用原生 `/v1` 契约，不再使用 Dify SDK、应用 Key、提示词表单或工作流事件。
 
 ## 当前接入状态（2026-10-09）

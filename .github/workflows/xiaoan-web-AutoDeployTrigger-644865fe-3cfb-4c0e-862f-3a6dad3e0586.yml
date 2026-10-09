@@ -24,6 +24,11 @@ jobs:
       - name: Checkout to the branch
         uses: actions/checkout@v2
 
+      - name: Check Clerk build configuration
+        env:
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.XIAOANWEB_CLERK_PUBLISHABLE_KEY }}
+        run: test -n "$CLERK_PUBLISHABLE_KEY"
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -31,19 +36,30 @@ jobs:
           tenant-id: ${{ secrets.XIAOANWEB_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.XIAOANWEB_AZURE_SUBSCRIPTION_ID }}
 
+      - name: Check frontend runtime configuration
+        run: |
+          az containerapp show -n xiaoan-web -g xiaoan-pilot-rg -o json |
+            jq -e '
+              .properties.configuration.ingress.fqdn as $fqdn |
+              .properties.template.containers[0].env as $env |
+              ([$env[] | select(.name == "CLERK_SECRET_KEY" and .secretRef == "clerk-secret-key")] | length) == 1 and
+              ([$env[] | select(.name == "BACKEND_API_URL" and .value == "http://xiaoan-api")] | length) == 1 and
+              ([$env[] | select(.name == "FRONTEND_ORIGIN" and .value == ("https://" + $fqdn))] | length) == 1
+            ' >/dev/null
+
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
+          dockerfilePath: Dockerfile
+          targetPort: 3000
           registryUrl: xiaoanhd5dc8acr.azurecr.io
           registryUsername: ${{ secrets.XIAOANWEB_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.XIAOANWEB_REGISTRY_PASSWORD }}
           containerAppName: xiaoan-web
           resourceGroup: xiaoan-pilot-rg
           imageToBuild: xiaoanhd5dc8acr.azurecr.io/xiaoan-web:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
+          buildArguments: |
+            "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.XIAOANWEB_CLERK_PUBLISHABLE_KEY }}"
 
 
